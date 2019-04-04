@@ -1,6 +1,5 @@
 ﻿using MicroCoin.Protocol;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -8,7 +7,6 @@ using System.Threading;
 
 namespace MicroCoin.Net
 {
-
     public class NetClient : IDisposable
     {
         public event EventHandler<NetworkPacket> PacketReceived;
@@ -20,15 +18,21 @@ namespace MicroCoin.Net
         protected TcpClient tcpClient = new TcpClient();
         public bool IsConnected { get; set; }
 
-        public bool Connect(string IP, ushort port, int timeout = 10000)
+        public bool Connect(string remoteHost, ushort port, int timeout = 10000)
         {
-            var asyncResult = tcpClient.BeginConnect(IP, port, null, null);
-            IsConnected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
-            tcpClient.EndConnect(asyncResult);
-            new Thread(HandleClient).Start();
-            if (IsConnected)
-                Connected?.Invoke(this, new EventArgs());
-            return IsConnected;
+            lock (clientLock)
+            {
+                if (IsConnected) return IsConnected;
+                var asyncResult = tcpClient.BeginConnect(remoteHost, port, null, null);
+                IsConnected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
+                tcpClient.EndConnect(asyncResult);
+                if (IsConnected)
+                {
+                    new Thread(HandleClient).Start();
+                    Connected?.Invoke(this, EventArgs.Empty);
+                }
+                return IsConnected;
+            }
         }
 
         public void Send(NetworkPacket packet)
@@ -54,31 +58,47 @@ namespace MicroCoin.Net
             {
                 while (true)
                 {
-                    var packet = new NetworkPacket();
-                    packet.Header.Magic = br.ReadUInt32();
+                    var header = new PacketHeader
+                    {
+                        Magic = br.ReadUInt32()
+                    };
                     if (tcpClient.Available < PacketHeader.Size - sizeof(uint))
                     {
                         break;
                     }
-                    if (packet.Header.Magic == Params.NetworkPacketMagic)
+                    if (header.Magic == Params.NetworkPacketMagic)
                     {
-                        packet.Header.RequestType = (RequestType) br.ReadUInt16();
-                        packet.Header.Operation = (NetOperationType) br.ReadUInt16();
-                        packet.Header.Error = br.ReadUInt16();
-                        packet.Header.RequestId = br.ReadUInt32();
-                        packet.Header.ProtocolVersion = br.ReadUInt16();
-                        packet.Header.AvailableProtocol = br.ReadUInt16();
-                        packet.Header.DataLength = br.ReadInt32();
-                        if (tcpClient.Available < packet.Header.DataLength) return;
-                        packet.Data = br.ReadBytes(packet.Header.DataLength);
-                        PacketReceived?.Invoke(this, packet);
+                        header.RequestType = (RequestType) br.ReadUInt16();
+                        header.Operation = (NetOperationType) br.ReadUInt16();
+                        header.Error = br.ReadUInt16();
+                        header.RequestId = br.ReadUInt32();
+                        header.ProtocolVersion = br.ReadUInt16();
+                        header.AvailableProtocol = br.ReadUInt16();
+                        header.DataLength = br.ReadInt32();
+                        if (tcpClient.Available < header.DataLength) return;
+                        if (header.Operation == NetOperationType.Hello && header.RequestType == RequestType.Response)
+                        {
+                            var packet = new NetworkPacket<HelloResponse>(header)
+                            {
+                                Data = br.ReadBytes(header.DataLength)
+                            };
+                            PacketReceived?.Invoke(this, packet);
+                        }
+                        else
+                        {
+                            var packet = new NetworkPacket(header)
+                            {
+                                Data = br.ReadBytes(header.DataLength)
+                            };
+                            PacketReceived?.Invoke(this, packet);
+                        }
                     }
                 }
             }
             if (tcpClient.Connected)
             {
                 tcpClient.Close();
-                Disconnected?.Invoke(this, new EventArgs());
+                Disconnected?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -86,7 +106,7 @@ namespace MicroCoin.Net
         {
             if (tcpClient.Connected)
             {
-                Disconnected?.Invoke(this, new EventArgs());
+                Disconnected?.Invoke(this, EventArgs.Empty);
                 tcpClient.Close();
             }
             tcpClient.Dispose();

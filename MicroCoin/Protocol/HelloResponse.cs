@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2018 Peter Nemeth
-// HelloRequest.cs - Copyright (c) 2018 Németh Péter
+// HelloResponse.cs - Copyright (c) 2018 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -24,43 +24,20 @@ using MicroCoin.Net;
 using MicroCoin.Utils;
 using System;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class HelloRequest : IStreamSerializable
+    public class HelloResponse : IStreamSerializable
     {
         public ushort ServerPort { get; set; }
         public ECKeyPair AccountKey { get; set; }
         public Timestamp Timestamp { get; set; }
         public Block Block { get; set; }
         public NodeServerList NodeServers { get; set; }
-        public string Version { get; set; }
-        public Int64 WorkSum { get; set; }
-
-        public HelloRequest() {
-        }
-
-        public HelloRequest(Stream stream) : this()
-        {
-            LoadFromStream(stream);
-        }
-
-        public void SaveToStream(Stream s)
-        {
-            using (BinaryWriter bw = new BinaryWriter(s, Encoding.Default, true))
-            {
-                bw.Write(ServerPort);
-                AccountKey.SaveToStream(s);
-                bw.Write(Timestamp);
-                Block.SaveToStream(s);
-                NodeServers.SaveToStream(s);
-                byte[] vb = Encoding.ASCII.GetBytes(Version);
-                bw.Write((ushort)vb.Length);
-                bw.Write(vb);
-                bw.Write(WorkSum);
-            }
-        }
+        public ByteString Version { get; set; }
+        public ulong WorkSum { get; set; }
 
         public void LoadFromStream(Stream stream)
         {
@@ -74,8 +51,32 @@ namespace MicroCoin.Protocol
                 Block.LoadFromStream(stream);
                 NodeServers = NodeServerList.LoadFromStream(stream, ServerPort);
                 Version = ByteString.ReadFromStream(br);
-                WorkSum = br.ReadInt64();
+                WorkSum = br.ReadUInt64();
             }
+        }
+
+        public void SaveToStream(Stream s)
+        {
+            using (BinaryWriter bw = new BinaryWriter(s, Encoding.Default, true))
+            {
+                bw.Write(ServerPort);
+                AccountKey.SaveToStream(s);
+                bw.Write(Timestamp);
+                Block.SaveToStream(s);
+                NodeServers.SaveToStream(s);
+                Version.SaveToStream(bw);                                        
+                bw.Write(WorkSum);
+            }
+        }
+
+        public HelloResponse()
+        {
+
+        }
+
+        public HelloResponse(Stream stream)
+        {
+            LoadFromStream(stream);
         }
     }
 }

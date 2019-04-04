@@ -211,7 +211,7 @@ namespace MicroCoin.Cryptography
         public bool Equals(ECKeyPair other)
         {
             if (other == null) return false;
-            if (other.CurveType != this.CurveType) return false;
+            if (other.CurveType != CurveType) return false;
             if (!PublicKey.X.SequenceEqual(other.PublicKey.X)) return false;
             if (!PublicKey.Y.SequenceEqual(other.PublicKey.Y)) return false;
             return true;

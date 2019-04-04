@@ -8,7 +8,7 @@ namespace MicroCoin.Net
     public class NetworkPacket
     {
         public PacketHeader Header { get; set; }
-        public virtual byte[] Data { get; set; }
+        public byte[] Data { get; set; }
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType)
         {
             Header = new PacketHeader
@@ -24,6 +24,11 @@ namespace MicroCoin.Net
         public NetworkPacket()
         {
             Header = new PacketHeader();
+        }
+
+        public NetworkPacket(PacketHeader header)
+        {
+            Header = header;
         }
     }
 
@@ -54,16 +59,21 @@ namespace MicroCoin.Net
                     Data = ms.ToArray();
                 }
             }
-
         }
 
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType) : base(netOperationType, requestType)
         {
 
         }
+
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType, T data) : base(netOperationType, requestType)
         {
             Message = data;
+        }
+
+        public NetworkPacket(PacketHeader header) : base(header)
+        {
+
         }
     }
 }
