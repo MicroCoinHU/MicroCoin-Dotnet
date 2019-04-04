@@ -2,16 +2,26 @@
 using MicroCoin.Net;
 using MicroCoin.Protocol;
 using MicroCoin.Utils;
+using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.ComponentModel;
 using System.Text;
+using Prism.Events;
 
 namespace MicroCoin
 {
     class Program
     {
+        public static ServiceProvider ServiceProvider { get; set; }
+
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+            
+            ServiceProvider = new ServiceCollection()
+                .AddSingleton<IEventAggregator, EventAggregator>()                
+                .BuildServiceProvider();
+
             NetClient client = new NetClient();
             if(client.Connect("127.0.0.1", 4004))
             {
@@ -44,9 +54,19 @@ namespace MicroCoin
                 request.ServerPort = 1234;
                 request.Timestamp = DateTime.UtcNow;
                 request.Version = "2.0.0wN";
-                request.WorkSum = 0;
+                request.WorkSum = 0;                
+                ServiceProvider.GetService<IEventAggregator>().GetEvent<NetworkEvent>().Subscribe(                  
+                (e) => {
+                    var r = e.Payload<HelloResponse>();
+                    Console.WriteLine("Hello response received with block height: {0}", r.Block.Header.BlockNumber);
+                },
+                    ThreadOption.BackgroundThread, 
+                    true, 
+                    (np) => { return np.Header.Operation == NetOperationType.Hello && np.Header.RequestType == RequestType.Response; }
+                );
                 NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(NetOperationType.Hello, RequestType.Request, request);
                 client.Send(networkPacket);
+                Console.ReadLine();
             }
         }
     }

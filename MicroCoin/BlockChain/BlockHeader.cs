@@ -21,11 +21,6 @@ namespace MicroCoin.BlockChain
         public Hash CheckPointHash { get; set; }
         public Hash TransactionHash { get; set; }
         public Hash ProofOfWork { get; set; }
-        public static BlockHeader GenesisBlock => new BlockHeader
-        {
-            BlockNumber = 0
-        };
-
         internal BlockHeader(Stream s)
         {
             using (var br = new BinaryReader(s, Encoding.ASCII, true))
@@ -103,5 +98,4 @@ namespace MicroCoin.BlockChain
             }
         }
     }
-
 }

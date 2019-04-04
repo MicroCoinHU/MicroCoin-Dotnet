@@ -1,4 +1,6 @@
 ﻿using MicroCoin.Protocol;
+using Prism.Events;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -7,12 +9,13 @@ using System.Threading;
 
 namespace MicroCoin.Net
 {
+    public class NetworkEvent : PubSubEvent<NetworkPacket>
+    {
+       
+    }
+
     public class NetClient : IDisposable
     {
-        public event EventHandler<NetworkPacket> PacketReceived;
-        public event EventHandler Connected;
-        public event EventHandler Disconnected;
-
         private object clientLock = new object();
 
         protected TcpClient tcpClient = new TcpClient();
@@ -29,7 +32,6 @@ namespace MicroCoin.Net
                 if (IsConnected)
                 {
                     new Thread(HandleClient).Start();
-                    Connected?.Invoke(this, EventArgs.Empty);
                 }
                 return IsConnected;
             }
@@ -76,29 +78,21 @@ namespace MicroCoin.Net
                         header.AvailableProtocol = br.ReadUInt16();
                         header.DataLength = br.ReadInt32();
                         if (tcpClient.Available < header.DataLength) return;
-                        if (header.Operation == NetOperationType.Hello && header.RequestType == RequestType.Response)
+                        var packet = new NetworkPacket(header)
                         {
-                            var packet = new NetworkPacket<HelloResponse>(header)
-                            {
-                                Data = br.ReadBytes(header.DataLength)
-                            };
-                            PacketReceived?.Invoke(this, packet);
-                        }
-                        else
-                        {
-                            var packet = new NetworkPacket(header)
-                            {
-                                Data = br.ReadBytes(header.DataLength)
-                            };
-                            PacketReceived?.Invoke(this, packet);
-                        }
+                            Client = this,
+                            Data = br.ReadBytes(header.DataLength)
+                        };
+                        Program.ServiceProvider
+                            .GetService<IEventAggregator>()
+                            .GetEvent<NetworkEvent>()
+                            .Publish(packet);
                     }
                 }
             }
             if (tcpClient.Connected)
             {
                 tcpClient.Close();
-                Disconnected?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -106,7 +100,6 @@ namespace MicroCoin.Net
         {
             if (tcpClient.Connected)
             {
-                Disconnected?.Invoke(this, EventArgs.Empty);
                 tcpClient.Close();
             }
             tcpClient.Dispose();
