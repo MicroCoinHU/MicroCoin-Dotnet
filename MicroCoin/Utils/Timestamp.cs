@@ -47,7 +47,7 @@ namespace MicroCoin.Utils
             return new Timestamp(dt);
         }
 
-        public static implicit operator UInt32(Timestamp t)
+        public static implicit operator uint(Timestamp t)
         {
             return t._unixTimestamp;
         }
@@ -56,7 +56,5 @@ namespace MicroCoin.Utils
         {
             return ((DateTime)this).ToString();
         }
-
     }
-
 }

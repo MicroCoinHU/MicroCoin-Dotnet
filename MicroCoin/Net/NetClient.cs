@@ -9,29 +9,27 @@ using System.Threading;
 
 namespace MicroCoin.Net
 {
-    public class NetworkEvent : PubSubEvent<NetworkPacket>
-    {
-       
-    }
+    public class NetworkEvent : PubSubEvent<NetworkPacket> { }
 
     public class NetClient : IDisposable
     {
-        private object clientLock = new object();
+        private readonly object clientLock = new object();
 
-        protected TcpClient tcpClient = new TcpClient();
+        protected TcpClient TcpClient { get; set; } = new TcpClient();
+        private Thread Thread { get; set; }
         public bool IsConnected { get; set; }
-
         public bool Connect(string remoteHost, ushort port, int timeout = 10000)
         {
             lock (clientLock)
             {
                 if (IsConnected) return IsConnected;
-                var asyncResult = tcpClient.BeginConnect(remoteHost, port, null, null);
+                var asyncResult = TcpClient.BeginConnect(remoteHost, port, null, null);
                 IsConnected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
-                tcpClient.EndConnect(asyncResult);
+                TcpClient.EndConnect(asyncResult);
                 if (IsConnected)
                 {
-                    new Thread(HandleClient).Start();
+                    Thread = new Thread(HandleClient);
+                    Thread.Start();
                 }
                 return IsConnected;
             }
@@ -47,62 +45,83 @@ namespace MicroCoin.Net
                     packet.Header.SaveToStream(sendStream);
                     sendStream.Write(packet.Data, 0, packet.Data.Length);
                     sendStream.Position = 0;
-                    sendStream.CopyTo(tcpClient.GetStream());
-                    tcpClient.GetStream().Flush();
+                    sendStream.CopyTo(TcpClient.GetStream());
+                    TcpClient.GetStream().Flush();
                 }
             }
         }
 
         public void HandleClient()
         {
-            var stream = tcpClient.GetStream();
-            using (var br = new BinaryReader(stream, Encoding.Default, true))
+            try
             {
-                while (true)
+                var stream = TcpClient.GetStream();
+                using (var br = new BinaryReader(stream, Encoding.Default, true))
                 {
-                    var header = new PacketHeader
+                    try
                     {
-                        Magic = br.ReadUInt32()
-                    };
-                    if (tcpClient.Available < PacketHeader.Size - sizeof(uint))
-                    {
-                        break;
+                        while (true)
+                        {                            
+                            var header = new PacketHeader
+                            {
+                                Magic = br.ReadUInt32()
+                            };
+                            if (TcpClient.Available < PacketHeader.Size - sizeof(uint))
+                            {
+                                break;
+                            }
+                            if (header.Magic == Params.NetworkPacketMagic)
+                            {
+                                header.RequestType = (RequestType)br.ReadUInt16();
+                                header.Operation = (NetOperationType)br.ReadUInt16();
+                                header.Error = br.ReadUInt16();
+                                header.RequestId = br.ReadUInt32();
+                                header.ProtocolVersion = br.ReadUInt16();
+                                header.AvailableProtocol = br.ReadUInt16();
+                                header.DataLength = br.ReadInt32();
+
+                                if (TcpClient.Available < header.DataLength)
+                                    return;
+
+                                var packet = new NetworkPacket(header)
+                                {
+                                    Client = this,
+                                    Data = br.ReadBytes(header.DataLength)
+                                };
+
+                                Program.ServiceProvider
+                                    .GetService<IEventAggregator>()
+                                    .GetEvent<NetworkEvent>()
+                                    .Publish(packet);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
                     }
-                    if (header.Magic == Params.NetworkPacketMagic)
+                    catch(IOException e)
                     {
-                        header.RequestType = (RequestType) br.ReadUInt16();
-                        header.Operation = (NetOperationType) br.ReadUInt16();
-                        header.Error = br.ReadUInt16();
-                        header.RequestId = br.ReadUInt32();
-                        header.ProtocolVersion = br.ReadUInt16();
-                        header.AvailableProtocol = br.ReadUInt16();
-                        header.DataLength = br.ReadInt32();
-                        if (tcpClient.Available < header.DataLength) return;
-                        var packet = new NetworkPacket(header)
-                        {
-                            Client = this,
-                            Data = br.ReadBytes(header.DataLength)
-                        };
-                        Program.ServiceProvider
-                            .GetService<IEventAggregator>()
-                            .GetEvent<NetworkEvent>()
-                            .Publish(packet);
+                        return;
                     }
                 }
             }
-            if (tcpClient.Connected)
+            finally
             {
-                tcpClient.Close();
+                if (TcpClient.Connected)
+                {
+                    TcpClient.Close();
+                }
             }
         }
 
         public void Dispose()
         {
-            if (tcpClient.Connected)
+            if (TcpClient.Connected)
             {
-                tcpClient.Close();
+                TcpClient.Close();
             }
-            tcpClient.Dispose();
+            TcpClient.Dispose();
             GC.SuppressFinalize(this);
         }
     }

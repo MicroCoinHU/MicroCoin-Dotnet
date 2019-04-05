@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using System;
 
 namespace MicroCoin.Utils
@@ -27,7 +25,8 @@ namespace MicroCoin.Utils
 
         private readonly uint _value;
 
-        public AccountNumber(string value) {
+        public AccountNumber(string value)
+        {
             try
             {
                 if (value.Contains("-"))
@@ -49,7 +48,8 @@ namespace MicroCoin.Utils
             }
         }
 
-        public AccountNumber(uint value) {
+        public AccountNumber(uint value)
+        {
             _value = value;
         }
 
@@ -57,6 +57,7 @@ namespace MicroCoin.Utils
         {
             return _value.GetHashCode();
         }
+
         public bool Equals(uint obj)
         {
             return _value.Equals(obj);
@@ -111,11 +112,11 @@ namespace MicroCoin.Utils
             return new AccountNumber(s);
         }
 
-        public static implicit operator UInt32(AccountNumber number)
+        public static implicit operator uint(AccountNumber number)
         {
             return number._value;
         }
-        public static implicit operator Int32(AccountNumber number)
+        public static implicit operator int(AccountNumber number)
         {
             return (int) number._value;
         }

@@ -7,6 +7,7 @@ using System;
 using System.ComponentModel;
 using System.Text;
 using Prism.Events;
+using System.Threading;
 
 namespace MicroCoin
 {
@@ -23,7 +24,7 @@ namespace MicroCoin
                 .BuildServiceProvider();
 
             NetClient client = new NetClient();
-            if(client.Connect("127.0.0.1", 4004))
+            if(client.Connect("blockexplorer.microcoin.hu", 4004))
             {
                 HelloRequest request = new HelloRequest
                 {
@@ -54,19 +55,20 @@ namespace MicroCoin
                 request.ServerPort = 1234;
                 request.Timestamp = DateTime.UtcNow;
                 request.Version = "2.0.0wN";
-                request.WorkSum = 0;                
+                request.WorkSum = 0;
                 ServiceProvider.GetService<IEventAggregator>().GetEvent<NetworkEvent>().Subscribe(                  
                 (e) => {
                     var r = e.Payload<HelloResponse>();
                     Console.WriteLine("Hello response received with block height: {0}", r.Block.Header.BlockNumber);
                 },
                     ThreadOption.BackgroundThread, 
-                    true, 
+                    false, 
                     (np) => { return np.Header.Operation == NetOperationType.Hello && np.Header.RequestType == RequestType.Response; }
                 );
                 NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(NetOperationType.Hello, RequestType.Request, request);
                 client.Send(networkPacket);
                 Console.ReadLine();
+                client.Dispose();
             }
         }
     }

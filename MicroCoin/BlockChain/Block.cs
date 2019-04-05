@@ -24,15 +24,14 @@ namespace MicroCoin.BlockChain
                 for (var i = 0; i < TransactionCount; i++)
                 {
                     var transactionType = (TransactionType)br.ReadUInt32();
-                    ITransaction t;
-                    t = TransactionFactory.FromType(transactionType);
+                    ITransaction t = TransactionFactory.FromType(transactionType);
                     t.TransactionType = transactionType;
                     t.LoadFromStream(stream);
                     Transactions.Add(t);
                 }
             }
         }
-        internal void SaveToStream(Stream stream)
+        public void SaveToStream(Stream stream)
         {
             Header.SaveToStream(stream);
             if (Header.BlockSignature == 1 || Header.BlockSignature == 3)

@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using MicroCoin.Cryptography;
 using MicroCoin.Utils;
 using System.IO;
@@ -37,10 +35,12 @@ namespace MicroCoin.Transactions
         {
             LoadFromStream(stream);
         }
+
         public TransferTransaction()
         {
 
         }
+
         public override byte[] GetHash()
         {
             MemoryStream ms = new MemoryStream();
@@ -71,6 +71,7 @@ namespace MicroCoin.Transactions
                 ms?.Dispose();
             }        
         }
+
         public override void SaveToStream(Stream s)
         {
             using (BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true))
@@ -124,8 +125,8 @@ namespace MicroCoin.Transactions
                 Signature = new ECSignature(stream);
                 
             }
-
         }
+
         public override bool IsValid()
         {
             if (!base.IsValid()) return false;

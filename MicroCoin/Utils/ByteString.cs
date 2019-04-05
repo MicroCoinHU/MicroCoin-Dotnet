@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -84,7 +82,6 @@ namespace MicroCoin.Utils
                 if (_value == null) return;
                 bw.Write(_value);
             }
-//            bw.Write(value);
         }
     }
 

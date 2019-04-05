@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using System;
 using System.IO;
 using System.Linq;
@@ -61,7 +59,6 @@ namespace MicroCoin.Utils
 
         public static implicit operator ByteString(Hash s) => new ByteString(s);
 
-
         public static implicit operator byte[] (Hash s) => s._value;
 
         public static implicit operator Hash(byte[] s) => new Hash(s);
@@ -100,6 +97,4 @@ namespace MicroCoin.Utils
             return _value.SequenceEqual(x._value);
         }
     }
-
-
 }

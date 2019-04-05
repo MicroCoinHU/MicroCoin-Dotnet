@@ -21,9 +21,9 @@ namespace MicroCoin.BlockChain
         public Hash CheckPointHash { get; set; }
         public Hash TransactionHash { get; set; }
         public Hash ProofOfWork { get; set; }
-        internal BlockHeader(Stream s)
+        internal BlockHeader(Stream stream)
         {
-            using (var br = new BinaryReader(s, Encoding.ASCII, true))
+            using (var br = new BinaryReader(stream, Encoding.ASCII, true))
             {                
                 BlockSignature = br.ReadByte();
                 if (BlockSignature > 0)
@@ -33,7 +33,7 @@ namespace MicroCoin.BlockChain
                 }
                 BlockNumber = br.ReadUInt32();
                 AccountKey = new ECKeyPair();
-                AccountKey.LoadFromStream(s);
+                AccountKey.LoadFromStream(stream);
                 Reward = br.ReadUInt64();
                 Fee = br.ReadUInt64();
                 Timestamp = br.ReadUInt32();
