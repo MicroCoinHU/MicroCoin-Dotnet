@@ -7,8 +7,15 @@ namespace MicroCoin.BlockChain
 {
     public class Block
     {
+        public uint Id { get => Header.BlockNumber; set => Header.BlockNumber = value; }
         public BlockHeader Header { get; set; }
         public IList<ITransaction> Transactions { get; set; }
+
+        public Block()
+        {
+            Header = new BlockHeader();
+        }
+
         public void LoadFromStream(Stream stream)
         {
             Header = new BlockHeader(stream);

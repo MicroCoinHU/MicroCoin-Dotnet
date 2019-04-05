@@ -6,6 +6,8 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using MicroCoin.Common;
+using MicroCoin.Utils;
 
 namespace MicroCoin.Net
 {
@@ -14,7 +16,6 @@ namespace MicroCoin.Net
     public class NetClient : IDisposable
     {
         private readonly object clientLock = new object();
-
         protected TcpClient TcpClient { get; set; } = new TcpClient();
         private Thread Thread { get; set; }
         public bool IsConnected { get; set; }
@@ -80,17 +81,27 @@ namespace MicroCoin.Net
                                 header.AvailableProtocol = br.ReadUInt16();
                                 header.DataLength = br.ReadInt32();
 
-                                if (TcpClient.Available < header.DataLength)
-                                    return;
+                                //if (TcpClient.Available < header.DataLength)
+                                    //return;
+
+                                if (header.Error > 0)
+                                {
+                                    ByteString message = br.ReadBytes(header.DataLength);
+                                    throw new Exception(message);
+                                }
+                                if (header.Error > 0)
+                                {
+                                    ByteString message = br.ReadBytes(header.DataLength);
+                                }
 
                                 var packet = new NetworkPacket(header)
                                 {
                                     Client = this,
                                     Data = br.ReadBytes(header.DataLength)
                                 };
-
-                                Program.ServiceProvider
-                                    .GetService<IEventAggregator>()
+                                
+                                ServiceLocator
+                                    .EventAggregator
                                     .GetEvent<NetworkEvent>()
                                     .Publish(packet);
                             }

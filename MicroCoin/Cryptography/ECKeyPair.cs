@@ -67,6 +67,9 @@ namespace MicroCoin.Cryptography
             Y = new byte[0]
         };
 
+        public byte[] X { get => PublicKey.X; set { PublicKey = new ECPoint() { X = value, Y = PublicKey.Y }; } }
+        public byte[] Y { get => PublicKey.Y; set { PublicKey = new ECPoint() { Y = value, X = PublicKey.X }; } }
+
         public ECParameters ECParameters
         {
             get
@@ -118,13 +121,13 @@ namespace MicroCoin.Cryptography
             using (BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true))
             {
                 ushort xLen = (ushort)PublicKey.X.Length;
-                if (PublicKey.X[0] == 0) xLen--;
-
                 ushort yLen = (ushort)PublicKey.Y.Length;
-                if (PublicKey.Y[0] == 0) yLen--;
-
+                if (xLen > 0 && yLen > 0)
+                {
+                    if (PublicKey.X[0] == 0) xLen--;
+                    if (PublicKey.Y[0] == 0) yLen--;
+                }
                 var len = xLen + yLen + 6;
-
                 if (writeName) Name.SaveToStream(bw);
                 if (writeLength) bw.Write((ushort)len);
                 bw.Write((ushort)CurveType);

@@ -8,23 +8,25 @@ using System.ComponentModel;
 using System.Text;
 using Prism.Events;
 using System.Threading;
+using MicroCoin.Common;
+using System.Linq;
 
 namespace MicroCoin
 {
     class Program
     {
-        public static ServiceProvider ServiceProvider { get; set; }
 
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            
-            ServiceProvider = new ServiceCollection()
-                .AddSingleton<IEventAggregator, EventAggregator>()                
+
+            ServiceLocator.ServiceProvider = new ServiceCollection()
+                .AddSingleton<IEventAggregator, EventAggregator>()
+                .AddSingleton<IBlockChain, BlockChainLiteDbFileStorage>()
                 .BuildServiceProvider();
 
             NetClient client = new NetClient();
-            if(client.Connect("blockexplorer.microcoin.hu", 4004))
+            if(client.Connect("127.0.0.1", 4004))
             {
                 HelloRequest request = new HelloRequest
                 {
@@ -56,10 +58,37 @@ namespace MicroCoin
                 request.Timestamp = DateTime.UtcNow;
                 request.Version = "2.0.0wN";
                 request.WorkSum = 0;
-                ServiceProvider.GetService<IEventAggregator>().GetEvent<NetworkEvent>().Subscribe(                  
+                ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe((e) => {
+                    var blocks = e.Payload<BlockResponse>().Blocks;
+                    foreach (var b in blocks)
+                    {
+                        Console.WriteLine("{0}: {1}", b.Header.BlockNumber, b.Header.Payload);
+                        ServiceLocator.GetService<IBlockChain>().AddBlock(b);
+                    }
+                    if (blocks.Last().Id < 100000)
+                    {
+                        NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request);
+                        blockRequest.Message = new BlockRequest
+                        {
+                            StartBlock = blocks.Last().Id,
+                            NumberOfBlocks = 10000
+                        };
+                        e.Client.Send(blockRequest);
+                    }
+                    //     Block block = ServiceLocator.GetService<IBlockChain>().GetBlock(13);
+                }, ThreadOption.BackgroundThread,
+                    false, (p) => p.Header.RequestType == RequestType.Response && p.Header.Operation == NetOperationType.Blocks);
+                ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe(                  
                 (e) => {
                     var r = e.Payload<HelloResponse>();
                     Console.WriteLine("Hello response received with block height: {0}", r.Block.Header.BlockNumber);
+                    NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request);
+                    blockRequest.Message = new BlockRequest
+                    {
+                        StartBlock = 99000,
+                        NumberOfBlocks = 10000
+                    };
+                    e.Client.Send(blockRequest);
                 },
                     ThreadOption.BackgroundThread, 
                     false, 
@@ -69,6 +98,7 @@ namespace MicroCoin
                 client.Send(networkPacket);
                 Console.ReadLine();
                 client.Dispose();
+                ServiceLocator.ServiceProvider.Dispose();
             }
         }
     }
