@@ -34,6 +34,30 @@ namespace MicroCoin.BlockChain
             Header = new BlockHeader();
         }
 
+        public static Block GenesisBlock()
+        {
+            return new Block
+            {
+                Header = new BlockHeader
+                {
+                    AccountKey = null,
+                    AvailableProtocol = 0,
+                    BlockNumber = 0,
+                    CompactTarget = 0,
+                    Fee = 0,
+                    Nonce = 0,
+                    TransactionHash = new byte[0],
+                    Payload = new byte[0],
+                    ProofOfWork = new byte[0],
+                    ProtocolVersion = 0,
+                    Reward = 0,
+                    CheckPointHash = Cryptography.Utils.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
+                    BlockSignature = 3,
+                    Timestamp = 0
+                }
+            };
+        }
+
         public Block(Stream stream) : this()
         {
             LoadFromStream(stream);

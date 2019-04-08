@@ -142,5 +142,16 @@ namespace MicroCoin.BlockChain
         {
             return db.GetCollection<Block>().FindById((int)blockNumber);
         }
+
+        public ulong GetWorkSum()
+        {
+            ulong worksum = 0;
+            var blocks = db.GetCollection<Block>();
+            for (int i = 0; i < blocks.Count(); i++)
+            {
+                worksum += blocks.FindById(i).Header.CompactTarget;
+            }
+            return worksum;
+        }
     }
 }

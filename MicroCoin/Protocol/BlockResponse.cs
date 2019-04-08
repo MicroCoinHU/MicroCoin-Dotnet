@@ -24,10 +24,14 @@ using MicroCoin.Common;
 
 namespace MicroCoin.Protocol
 {
-    public class BlockResponse : IStreamSerializable
+    public class BlockResponse : IStreamSerializable, INetworkPayload
     {
         public List<Block> Blocks { get; set; }
         public uint TransactionCount { get; set; }
+
+        public NetOperationType NetOperation => NetOperationType.Blocks;
+
+        public RequestType RequestType => RequestType.Response;
 
         public BlockResponse()
         {

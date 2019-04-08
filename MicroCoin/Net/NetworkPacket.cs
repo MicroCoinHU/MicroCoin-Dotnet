@@ -27,7 +27,7 @@ namespace MicroCoin.Net
     {
         public PacketHeader Header { get; private set; }
         public byte[] RawData { get; set; }
-        public NetClient Client { get; set; }
+        public Node Node { get; set; }
 
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType)
         {
@@ -68,7 +68,7 @@ namespace MicroCoin.Net
         }
     }
 
-    public class NetworkPacket<T> : NetworkPacket where T : class, IStreamSerializable, new()
+    public class NetworkPacket<T> : NetworkPacket where T : class, INetworkPayload, new()
     {
         private T message = null;
         public T Message
@@ -101,6 +101,11 @@ namespace MicroCoin.Net
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType, T data) : base(netOperationType, requestType)
         {
             Message = data;
+        }
+
+        public NetworkPacket(T data) : this(data.NetOperation, data.RequestType, data)
+        {
+
         }
 
         public NetworkPacket(PacketHeader header) : base(header)

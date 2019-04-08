@@ -25,12 +25,16 @@ using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class CheckPointRequest : IStreamSerializable
+    public class CheckPointRequest : IStreamSerializable, INetworkPayload
     {
         public uint CheckPointBlockCount { get; set; }
         public Hash CheckPointHash { get; set; }
         public uint StartBlock { get; set; }
         public uint EndBlock { get; set; }
+        public NetOperationType NetOperation => NetOperationType.CheckPoint;
+
+        public RequestType RequestType => RequestType.Request;
+
         public CheckPointRequest()
         {
 

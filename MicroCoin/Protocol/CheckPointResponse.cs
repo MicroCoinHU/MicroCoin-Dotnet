@@ -9,7 +9,7 @@ using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class CheckPointResponse : IStreamSerializable
+    public class CheckPointResponse : IStreamSerializable, INetworkPayload
     {
         public ByteString Magic { get; set; }
         public ushort Protocol { get; set; }
@@ -23,6 +23,10 @@ namespace MicroCoin.Protocol
         public ushort Version { get; set; }
         protected uint UncompressedSize { get; set; }
         protected uint CompressedSize { get; set; }
+        public ICollection<CheckPointBlock> CheckPoints { get; set; } = new List<CheckPointBlock>();
+
+        public NetOperationType NetOperation => NetOperationType.CheckPoint;
+        public RequestType RequestType => RequestType.Response;
 
         private static void DecompressData(byte[] inData, out byte[] outData)
         {
@@ -89,7 +93,7 @@ namespace MicroCoin.Protocol
                         long pos = unCompressed.Position;
                         HeaderEnd = pos;
                         Offsets = new uint[(EndBlock - StartBlock + 1)];
-                        var list = new List<CheckPointBlock>();
+                        //var checkPoints = new List<CheckPointBlock>();
                         for (int i = 0; i < Offsets.Length; i++)
                         {
                             Offsets[i] = (uint)(br2.ReadUInt32());
@@ -97,19 +101,19 @@ namespace MicroCoin.Protocol
                             var p = unCompressed.Position;
                             unCompressed.Position = Offsets[i] + HeaderEnd;
                             cb.LoadFromStream(unCompressed);
-                            list.Add(cb);
+                            CheckPoints.Add(cb);
                             if (i % 10000 == 0)
                             {
-                                ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
-                                list.Clear();
+                                //ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
+                                //list.Clear();
                             }
-                            Console.WriteLine("Adding block {0}", cb.Header.BlockNumber);
+                            //Console.WriteLine("Adding block {0}", cb.Header.BlockNumber);
                             unCompressed.Position = p;
                         }
-                        if (list.Count > 0)
-                        {
-                            ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
-                        }
+                        //if (list.Count > 0)
+                        //{
+                        //    ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
+                        //}
                     }
                 }
             }

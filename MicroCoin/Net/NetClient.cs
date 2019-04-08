@@ -18,7 +18,6 @@
 //-----------------------------------------------------------------------
 using MicroCoin.Protocol;
 using Prism.Events;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -32,46 +31,56 @@ using System.Threading.Tasks;
 namespace MicroCoin.Net
 {
     public class NetworkEvent : PubSubEvent<NetworkPacket> { }
+    public class NewServerConnection : PubSubEvent<Node> { }
 
-    public class NetClient : IDisposable
+    public class NetClient : INetClient
     {
         private readonly object clientLock = new object();
+        private readonly IEventAggregator eventAggregator;
+
         protected TcpClient TcpClient { get; set; } = new TcpClient();
         private Thread Thread { get; set; }
-        public Node Node { get; set; }
-        public bool IsConnected { get; set; }
+        private Node Node { get; set; }
+        public bool IsConnected { get => TcpClient == null ? false : TcpClient.Connected; }
         public bool Started { get; set; }
-        public bool Connect(string remoteHost, ushort port, int timeout = 10000)
+
+        public NetClient(IEventAggregator eventAggregator)
+        {
+            this.eventAggregator = eventAggregator;
+        }
+        public bool Connect(Node node, int timeout = 500)
         {
             lock (clientLock)
             {
                 if (IsConnected) return IsConnected;
-                var asyncResult = TcpClient.BeginConnect(remoteHost, port, null, null);
-                IsConnected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
-                TcpClient.EndConnect(asyncResult);
-                if (IsConnected)
+                Node = node;
+                var old = TcpClient.ReceiveTimeout;
+                TcpClient.ReceiveTimeout = 500;
+                var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, null, null);
+                asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
+                try
                 {
-                    Node = new Node
-                    {
-                        IP = remoteHost,
-                        Port = port,
-                        TcpClient = TcpClient,
-                        LastConnection = DateTime.Now,
-                        Connected = true
-                    };
+                    TcpClient.EndConnect(asyncResult);
                 }
+                catch (Exception)
+                {
+                    return false;
+                }
+                TcpClient.ReceiveTimeout = old;
+                Node.NetClient = this;
                 return IsConnected;
             }
         }
-
         public void Start()
         {
             lock (clientLock)
             {
+                if (!IsConnected) throw new InvalidOperationException("Not connected");
                 Started = true;
                 Thread = new Thread(HandleClient);
                 Thread.Start();
             }
+            eventAggregator.GetEvent<NewServerConnection>().Publish(Node);
         }
 
         public async Task<NetworkPacket> SendAndWaitAsync(NetworkPacket packet)
@@ -109,17 +118,19 @@ namespace MicroCoin.Net
                             header.DataLength = br.ReadInt32();
                             if (header.Error > 0)
                             {
-                                ByteString message = br.ReadBytes(header.DataLength);
-                                throw new Exception(message);
+                                ByteString message = ByteString.ReadFromStream(br);
+                                string error = message;
+                                Console.WriteLine(error);
+                                throw new Exception(error);
                             }
                             if (header.RequestType != RequestType.Response || header.Operation != packet.Header.Operation || header.RequestId != packet.Header.RequestId)
                             {
-                                br.ReadBytes(header.DataLength);
+                                br.ReadBytes(header.DataLength); // Drop package
                                 continue;
                             }
                             return new NetworkPacket(header)
                             {
-                                Client = this,
+                                Node = Node,
                                 RawData = br.ReadBytes(header.DataLength)
                             };
                         }
@@ -133,6 +144,7 @@ namespace MicroCoin.Net
         {
             lock (clientLock)
             {
+                Console.WriteLine("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
                 using (var sendStream = new MemoryStream())
                 {
                     packet.Header.DataLength = packet.RawData.Length;
@@ -155,16 +167,21 @@ namespace MicroCoin.Net
                     try
                     {
                         while (true)
-                        {                            
+                        {
                             var header = new PacketHeader
                             {
                                 Magic = br.ReadUInt32()
                             };
+                            Node.LastConnection = DateTime.Now;
                             if (TcpClient.Available < PacketHeader.Size - sizeof(uint))
                             {
                                 break;
                             }
-                            if (header.Magic == Params.NetworkPacketMagic)
+                            if (header.Magic != Params.NetworkPacketMagic)
+                            {
+                                break;
+                            }
+                            else
                             {
                                 header.RequestType = (RequestType)br.ReadUInt16();
                                 header.Operation = (NetOperationType)br.ReadUInt16();
@@ -176,37 +193,28 @@ namespace MicroCoin.Net
 
                                 if (header.Error > 0)
                                 {
-                                    ByteString message = br.ReadBytes(header.DataLength);
+                                    ByteString message = ByteString.ReadFromStream(br);
                                     Console.WriteLine(this.TcpClient.Client.RemoteEndPoint.ToString() + " " + message);
                                     break;
                                 }
                                 var packet = new NetworkPacket(header)
                                 {
-                                    Client = this,
+                                    Node = Node,
                                     RawData = br.ReadBytes(header.DataLength)
-                                };
-                                
-                                ServiceLocator
-                                    .EventAggregator
-                                    .GetEvent<NetworkEvent>()
-                                    .Publish(packet);
-                            }
-                            else
-                            {
-                                break;
+                                };                 
+                                eventAggregator.GetEvent<NetworkEvent>().Publish(packet);
                             }
                         }
                     }
-                    catch(IOException e)
+                    catch (IOException e)
                     {
-                        Console.WriteLine(e.Message);
+                        Console.WriteLine(Node.EndPoint + " " + e.Message);
                         return;
                     }
                 }
             }
             finally
             {
-                IsConnected = false;
                 if (TcpClient.Connected)
                 {
                     Console.WriteLine("Disconnected from {0}", Node?.EndPoint.ToString());
@@ -220,7 +228,6 @@ namespace MicroCoin.Net
             if (TcpClient.Connected)
             {
                 TcpClient.Close();
-                IsConnected = false;
             }
             TcpClient.Dispose();
             GC.SuppressFinalize(this);

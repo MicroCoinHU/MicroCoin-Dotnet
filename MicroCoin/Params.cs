@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace MicroCoin
@@ -29,5 +30,13 @@ namespace MicroCoin
         public static uint NetworkPacketMagic { get; internal set; } = 0x0A043580;
         public static ushort NetworkProtocolVersion { get; set; } = 6;
         public static ushort NetworkProtocolAvailable { get; set; } = 6;
+        public static ICollection<IPEndPoint> FixedSeedServers { get; set; } = new HashSet<IPEndPoint>()
+        {
+            new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4004),
+            new IPEndPoint(IPAddress.Parse("80.211.211.48"), 4004),
+            new IPEndPoint(IPAddress.Parse("94.177.237.196"), 4004),
+            new IPEndPoint(IPAddress.Parse("5.189.143.76"), 4004),
+            new IPEndPoint(IPAddress.Parse("80.211.200.121"), 4004)
+        };
     }
 }

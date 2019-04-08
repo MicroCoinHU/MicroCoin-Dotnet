@@ -22,11 +22,15 @@ using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class BlockRequest : IStreamSerializable
+    public class BlockRequest : IStreamSerializable, INetworkPayload
     {
         public uint StartBlock { get; set; }
         public uint EndBlock { get; set; }
         public uint NumberOfBlocks { get; set; }
+
+        public NetOperationType NetOperation => NetOperationType.Blocks;
+
+        public RequestType RequestType => RequestType.Request;
 
         public BlockRequest()
         {

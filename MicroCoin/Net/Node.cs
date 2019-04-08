@@ -32,11 +32,11 @@ namespace MicroCoin.Net
         public ushort Port { get; set; }
         public Timestamp LastConnection { get; set; }
         public IPEndPoint EndPoint { get => new IPEndPoint(IPAddress.Parse(IP), Port); }
-        public TcpClient TcpClient { get; set; }
-        public bool Connected { get; set; }
+        public NetClient NetClient { get; set; }
+        public bool Connected => NetClient == null ? false : NetClient.IsConnected;
         public ushort ServerPort { get; internal set; }
         public uint BlockHeight { get; set; } = 0;
-        private readonly object _clientLock = new object();
+
         public override string ToString()
         {
             return IP + ":" + Port;

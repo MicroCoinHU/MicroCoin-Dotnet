@@ -28,7 +28,7 @@ using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class HelloResponse : IStreamSerializable
+    public class HelloResponse : IStreamSerializable, INetworkPayload
     {
         public ushort ServerPort { get; set; }
         public ECKeyPair AccountKey { get; set; }
@@ -37,6 +37,9 @@ namespace MicroCoin.Protocol
         public NodeServerList NodeServers { get; set; }
         public ByteString Version { get; set; }
         public ulong WorkSum { get; set; }
+        public NetOperationType NetOperation => NetOperationType.Hello;
+
+        public RequestType RequestType => RequestType.Response;
 
         public void LoadFromStream(Stream stream)
         {

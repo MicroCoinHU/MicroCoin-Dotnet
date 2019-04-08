@@ -28,6 +28,7 @@ namespace MicroCoin.BlockChain
         void AddBlock(Block block);
         void AddBlocks(IEnumerable<Block> block);
         Task AddBlocksAsync(IEnumerable<Block> blocks);
+        ulong GetWorkSum();
         Block GetBlock(uint blockNumber);
         int BlockHeight { get; }
         int Count { get; }

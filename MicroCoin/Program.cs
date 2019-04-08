@@ -34,6 +34,7 @@ using LiteDB;
 using MicroCoin.Chain;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using MicroCoin.Handlers;
 
 namespace MicroCoin
 {
@@ -94,178 +95,49 @@ namespace MicroCoin
                 .AddSingleton<IEventAggregator, EventAggregator>()
                 .AddSingleton<IBlockChain, BlockChainLiteDbStorage>()
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
+                .AddSingleton<IPeerManager, PeerManager>()
+                .AddSingleton<IHandler<HelloRequest>, HelloHandler>()
+                .AddSingleton<IHandler<HelloResponse>, HelloHandler>()
+                .AddSingleton<IHandler<BlockResponse>, BlocksHandler>()
+                .AddSingleton<IHandler<NewBlockRequest>, BlocksHandler>()
+                .AddSingleton<IHandler<CheckPointResponse>, CheckPointHandler>()
+                .AddSingleton<IDiscovery, Discovery>()
+                .AddTransient<INetClient, NetClient>()
                 .BuildServiceProvider();
-//            var last = ServiceLocator.GetService<IBlockChain>().GetBlock(ServiceLocator.GetService<IBlockChain>().BlockHeight);
-            HelloRequest request = new HelloRequest
-            {
-                AccountKey = Cryptography.ECKeyPair.CreateNew(),
-                NodeServers = new NodeServerList(),
-                Block = new Block
-                {
-                    Header = new BlockHeader
-                    {
-                        AccountKey = null,
-                        AvailableProtocol = 0,
-                        BlockNumber = 0,
-                        CompactTarget = 0,
-                        Fee = 0,
-                        Nonce = 0,
-                        TransactionHash = new byte[0],
-                        Payload = new byte[0],
-                        ProofOfWork = new byte[0],
-                        ProtocolVersion = 0,
-                        Reward = 0,
-                        CheckPointHash = Cryptography.Utils.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
-                        BlockSignature = 3,
-                        Timestamp = 0
-                    }
-                }
-            };
-            request.ServerPort = 0;
-            request.Timestamp = DateTime.UtcNow;
-            request.Version = "2.0.0wN";
-            request.WorkSum = 0;
-            ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe((e) =>
-            {
-                var blocks = e.Payload<BlockResponse>().Blocks;
-                foreach (var b in blocks)
-                {
-                    Console.WriteLine("{0}: {1}", b.Header.BlockNumber, b.Header.Payload);
-                }
-                ServiceLocator.GetService<IBlockChain>().AddBlocks(blocks);
-                if (blocks.Last().Id < e.Client.Node.BlockHeight)
-                {
-                    NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request);
-                    blockRequest.Message = new BlockRequest
-                    {
-                        StartBlock = blocks.Last().Id,
-                        NumberOfBlocks = 10000
-                    };
-                    e.Client.Send(blockRequest);
-                }
-            }, ThreadOption.BackgroundThread,
-                false, (p) => p.Header.RequestType == RequestType.Response && p.Header.Operation == NetOperationType.Blocks);
+
+            ServiceLocator
+                .GetService<IEventAggregator>()
+                .GetEvent<NetworkEvent>()
+                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<HelloRequest>>().Handle, ThreadOption.BackgroundThread,
+                true, (p) => p.Header.Operation == NetOperationType.Hello);
+
+            ServiceLocator
+                .EventAggregator
+                .GetEvent<NetworkEvent>()
+                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<BlockResponse>>().Handle, ThreadOption.BackgroundThread,
+                false, (p) => p.Header.Operation == NetOperationType.Blocks || p.Header.Operation == NetOperationType.NewBlock);
 
             ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe(
-            (e) =>
-            {
-                var r = e.Payload<HelloResponse>();
-                e.Client.Node.BlockHeight = r.Block.Header.BlockNumber;
-                Console.WriteLine("{1} - Hello response received with block height: {0}", r.Block.Header.BlockNumber, e.Client.Node.EndPoint.ToString());
-                var blockChain = ServiceLocator.GetService<IBlockChain>();
-                var bc = blockChain.GetBlock(r.Block.Header.BlockNumber);
-                if (bc == null)
-                {
-                    bc = blockChain.GetBlock((uint)blockChain.BlockHeight);
-                }
-                if (blockChain.BlockHeight < e.Client.Node.BlockHeight)
-                {
-                    NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request);
-                    blockRequest.Message = new BlockRequest
-                    {
-                        StartBlock = (uint)blockChain.BlockHeight,
-                        NumberOfBlocks = 10000
-                    };
-                    e.Client.Send(blockRequest);
-                }                
-                /*
-                CheckPointRequest dt = new CheckPointRequest()
-                {
-                    CheckPointBlockCount = (uint)(blockChain.BlockHeight / 100) * 100,
-                    StartBlock = 0,
-                    EndBlock = 10000, // (uint) ((blockChain.BlockHeight/100)*100-1),
-                    CheckPointHash = blockChain.GetBlock((uint)((blockChain.BlockHeight / 100) * 100)).Header.CheckPointHash
-                };
-                NetworkPacket<CheckPointRequest> np = new NetworkPacket<CheckPointRequest>(NetOperationType.CheckPoint, RequestType.Request, dt);
-                e.Client.Send(np);
-                */
-            },
-                ThreadOption.BackgroundThread,
-                false,
-                (np) => { return np.Header.Operation == NetOperationType.Hello && np.Header.RequestType == RequestType.Response; }
-            );
+                ServiceLocator.ServiceProvider.GetService<IHandler<CheckPointResponse>>().Handle,
+                ThreadOption.BackgroundThread, false, p => p.Header.Operation == NetOperationType.CheckPoint && p.Header.RequestType == RequestType.Response);
 
-            ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe((p) =>
-            {
-                var block = p.Payload<NewBlockRequest>().Block;
-                Console.WriteLine("New block received with height {0}", block.Header.BlockNumber);
-                var blockChain = ServiceLocator.GetService<IBlockChain>();
-                if (block.Header.BlockNumber > blockChain.BlockHeight)
-                {
-                    NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request);
-                    blockRequest.Message = new BlockRequest
-                    {
-                        StartBlock = (uint)blockChain.BlockHeight,
-                        NumberOfBlocks = 100
-                    };
-                    p.Client.Send(blockRequest);
-                }
-            }, ThreadOption.BackgroundThread, false, (p) => p.Header.Operation == NetOperationType.NewBlock);
-            ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe((p) =>
-            {
-                Console.WriteLine("Hello request received from {0}", p.Client.Node.IP);
-                HelloResponse response = new HelloResponse();
-                response.AccountKey = ECKeyPair.CreateNew();
-                response.NodeServers = new NodeServerList();
-                response.ServerPort = 0;
-                response.Timestamp = DateTime.Now;
-                response.Version = "2.0.0wN";
-                response.WorkSum = 0;
-                response.Block = new Block
-                {
-                    Header = new BlockHeader
-                    {
-                        AccountKey = null,
-                        AvailableProtocol = 0,
-                        BlockNumber = 0,
-                        CompactTarget = 0,
-                        Fee = 0,
-                        Nonce = 0,
-                        TransactionHash = new byte[0],
-                        Payload = new byte[0],
-                        ProofOfWork = new byte[0],
-                        ProtocolVersion = 0,
-                        Reward = 0,
-                        CheckPointHash = Utils.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
-                        BlockSignature = 3,
-                        Timestamp = 0
-                    }
-                };
-                p.Client.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response));
+            ServiceLocator.EventAggregator.GetEvent<NewServerConnection>().Subscribe((node) => {
+                if(node.NetClient != null && node.Connected)
+                    node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
+            }, ThreadOption.BackgroundThread, false);
 
-            }, ThreadOption.BackgroundThread, true,
-            (p) => p.Header.Operation == NetOperationType.Hello && p.Header.RequestType == RequestType.Request
-            );
+            if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
+            {
+                throw new Exception("NO FIX SEEDS FOUND");
+            }
 
-            ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe((p) =>
-            {
-                var data = p.Payload<CheckPointResponse>();
-                var blockChain = ServiceLocator.GetService<IBlockChain>();
-                var end = data.EndBlock + 10000;
-                if (end > (blockChain.BlockHeight / 100) * 100 - 1)
+            var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p=>p.NetClient != null).OrderByDescending(p => p.BlockHeight);
+            foreach (var bestNode in bestNodes)
+            {                
+                var bc = ServiceLocator.GetService<IBlockChain>();
+                if (bestNode.BlockHeight > bc.BlockHeight)
                 {
-                    end = (uint) (blockChain.BlockHeight / 100) * 100 - 1;
-                }
-                CheckPointRequest dt = new CheckPointRequest()
-                {
-                    CheckPointBlockCount = (uint)(blockChain.BlockHeight / 100) * 100,
-                    StartBlock = data.EndBlock,
-                    EndBlock = end,
-                    CheckPointHash = blockChain.GetBlock((uint)((blockChain.BlockHeight / 100) * 100)).Header.CheckPointHash
-                };
-                NetworkPacket<CheckPointRequest> np = new NetworkPacket<CheckPointRequest>(NetOperationType.CheckPoint, RequestType.Request, dt);
-                p.Client.Send(np);
-            }, ThreadOption.BackgroundThread, false, p => p.Header.Operation == NetOperationType.CheckPoint && p.Header.RequestType == RequestType.Response);
-            NetClient client = new NetClient();
-            var clients = new List<NetClient>();
-            if (client.Connect("127.0.0.1", 4004))
-            {
-                NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(NetOperationType.Hello, RequestType.Request, request);
-                var hello = await client.SendAndWaitAsync(networkPacket);
-                var bc = ServiceLocator.GetService<IBlockChain>();                
-                if (hello.Payload<HelloResponse>().Block.Header.BlockNumber > bc.BlockHeight)
-                {
-                    var remoteBlock = hello.Payload<HelloResponse>().Block.Header.BlockNumber;
+                    var remoteBlock = bestNode.BlockHeight;
                     do
                     {
                         NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
@@ -276,9 +148,18 @@ namespace MicroCoin
                                 NumberOfBlocks = 10000
                             }
                         };
-                        var response = await client.SendAndWaitAsync(blockRequest);                        
+                        NetworkPacket response;
+                        try
+                        {
+                            response = await bestNode.NetClient.SendAndWaitAsync(blockRequest);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message+" "+ bestNode.EndPoint.ToString());
+                            break;
+                        }
                         var blocks = response.Payload<BlockResponse>().Blocks;
-                        Console.WriteLine("Checking {0} blocks.", blocks.Count);
+                        Console.WriteLine("Checking {0} blocks", blocks.Count);
                         Parallel.ForEach(blocks, (b) =>
                         {
                             if (!b.Header.IsValid())
@@ -289,7 +170,8 @@ namespace MicroCoin
                             {
                                 Parallel.ForEach(b.Transactions, (t) =>
                                 {
-                                    if (!t.IsValid()) throw new Exception(string.Format("Invalid transaction {0}", t.ToString()));
+                                    if (!t.IsValid())
+                                        throw new Exception(string.Format("Invalid transaction {0}", t.ToString()));
                                 });
                             }
                         });
@@ -297,33 +179,11 @@ namespace MicroCoin
                         Console.WriteLine("Added {0} blocks. New block height {1}", blocks.Count, bc.BlockHeight);
                     } while (remoteBlock > bc.BlockHeight);
                 }
-
-                foreach(var h in hello.Payload<HelloResponse>().NodeServers)
-                {
-                    var c = new NetClient();
-                    if (c.Connect(h.Value.IP, h.Value.Port))
-                    {
-                        clients.Add(c);
-                        c.Start();
-                        new Timer((state) =>
-                        {
-                            if (!((NetClient)state).IsConnected) return;
-                            ((NetClient)state).Send(networkPacket);
-                        }, c, 0, 60000);
-                    }
-                    else
-                    {
-                        c.Dispose();
-                    }
-                }
-                client.Start();
-                Timer timer = new Timer((state) =>
-                {
-                    client.Send(networkPacket);
-                }, null, 0, 60000);
             }
+
+            ServiceLocator.GetService<IDiscovery>().Start();
+
             Console.ReadLine();
-            client.Dispose();
             ServiceLocator.ServiceProvider.Dispose();
         }
     }

@@ -27,7 +27,7 @@ using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class HelloRequest : IStreamSerializable
+    public class HelloRequest : IStreamSerializable, INetworkPayload
     {
         public ushort ServerPort { get; set; }
         public ECKeyPair AccountKey { get; set; }
@@ -35,9 +35,26 @@ namespace MicroCoin.Protocol
         public Block Block { get; set; }
         public NodeServerList NodeServers { get; set; }
         public string Version { get; set; }
-        public Int64 WorkSum { get; set; }
+        public ulong WorkSum { get; set; }
+        public NetOperationType NetOperation => NetOperationType.Hello;
+
+        public RequestType RequestType => RequestType.Request;
 
         public HelloRequest() {
+        }
+
+        public static HelloRequest NewRequest(IBlockChain blockChain)
+        {
+            return new HelloRequest()
+            {
+                AccountKey = ECKeyPair.CreateNew(),
+                NodeServers = new NodeServerList(),
+                ServerPort = Params.ServerPort,
+                Timestamp = DateTime.UtcNow,
+                Version = "2.0.0wN",
+                Block = blockChain.BlockHeight > 0 ? blockChain.GetBlock((uint)blockChain.BlockHeight) : Block.GenesisBlock(),
+                WorkSum = 0
+            };
         }
 
         public HelloRequest(Stream stream) : this()
@@ -73,7 +90,7 @@ namespace MicroCoin.Protocol
                 Block.LoadFromStream(stream);
                 NodeServers = NodeServerList.LoadFromStream(stream, ServerPort);
                 Version = ByteString.ReadFromStream(br);
-                WorkSum = br.ReadInt64();
+                WorkSum = br.ReadUInt64();
             }
         }
     }
