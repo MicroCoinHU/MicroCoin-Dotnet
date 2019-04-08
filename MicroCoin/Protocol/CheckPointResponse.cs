@@ -1,0 +1,123 @@
+﻿using ComponentAce.Compression.Libs.zlib;
+using MicroCoin.CheckPoints;
+using MicroCoin.Common;
+using MicroCoin.Types;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+
+namespace MicroCoin.Protocol
+{
+    public class CheckPointResponse : IStreamSerializable
+    {
+        public ByteString Magic { get; set; }
+        public ushort Protocol { get; set; }
+        public uint BlockCount { get; set; }
+        public uint StartBlock { get; set; }
+        public uint EndBlock { get; set; }
+        public Hash Hash { get; set; }
+        public long HeaderEnd { get; set; }
+        public uint[] Offsets { get; private set; }
+        public ByteString CheckPointResponseMagic { get; set; }
+        public ushort Version { get; set; }
+        protected uint UncompressedSize { get; set; }
+        protected uint CompressedSize { get; set; }
+
+        private static void DecompressData(byte[] inData, out byte[] outData)
+        {
+            using (MemoryStream outMemoryStream = new MemoryStream())
+            {
+                using (ZOutputStream outZStream = new ZOutputStream(outMemoryStream))
+                {
+                    using (Stream inMemoryStream = new MemoryStream(inData))
+                    {
+                        CopyStream(inMemoryStream, outZStream);
+                        outZStream.finish();
+                        outData = outMemoryStream.ToArray();
+                    }
+                }
+            }
+        }
+
+        private static void CompressData(byte[] inData, out byte[] outData)
+        {
+            using (MemoryStream outMemoryStream = new MemoryStream())
+            using (ZOutputStream outZStream = new ZOutputStream(outMemoryStream, zlibConst.Z_DEFAULT_COMPRESSION))
+            using (Stream inMemoryStream = new MemoryStream(inData))
+            {
+                CopyStream(inMemoryStream, outZStream);
+                outZStream.finish();
+                outData = outMemoryStream.ToArray();
+            }
+        }
+
+        private static void CopyStream(Stream input, Stream output)
+        {
+            byte[] buffer = new byte[2000];
+            int len;
+            while ((len = input.Read(buffer, 0, 2000)) > 0)
+            {
+                output.Write(buffer, 0, len);
+            }
+            output.Flush();
+        }
+
+        public void LoadFromStream(Stream stream)
+        {
+            using (BinaryReader br = new BinaryReader(stream, Encoding.Default, true))
+            {
+                CheckPointResponseMagic = ByteString.ReadFromStream(br);
+                Version = br.ReadUInt16();
+                UncompressedSize = br.ReadUInt32();
+                CompressedSize = br.ReadUInt32();
+                DecompressData(br.ReadBytes((int)CompressedSize), out byte[] decompressed);
+                using (var unCompressed = new MemoryStream(decompressed))
+                {
+                    using (var br2 = new BinaryReader(unCompressed, Encoding.ASCII, true))
+                    {
+                        unCompressed.Position = unCompressed.Length - 34;
+                        Hash = ByteString.ReadFromStream(br2);
+                        unCompressed.Position = 0;
+                        ushort len = br2.ReadUInt16();
+                        Magic = br2.ReadBytes(len);
+                        Protocol = br2.ReadUInt16();
+                        Version = br2.ReadUInt16();
+                        BlockCount = br2.ReadUInt32();
+                        StartBlock = br2.ReadUInt32();
+                        EndBlock = br2.ReadUInt32();
+                        long pos = unCompressed.Position;
+                        HeaderEnd = pos;
+                        Offsets = new uint[(EndBlock - StartBlock + 1)];
+                        var list = new List<CheckPointBlock>();
+                        for (int i = 0; i < Offsets.Length; i++)
+                        {
+                            Offsets[i] = (uint)(br2.ReadUInt32());
+                            var cb = new CheckPointBlock();
+                            var p = unCompressed.Position;
+                            unCompressed.Position = Offsets[i] + HeaderEnd;
+                            cb.LoadFromStream(unCompressed);
+                            list.Add(cb);
+                            if (i % 10000 == 0)
+                            {
+                                ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
+                                list.Clear();
+                            }
+                            Console.WriteLine("Adding block {0}", cb.Header.BlockNumber);
+                            unCompressed.Position = p;
+                        }
+                        if (list.Count > 0)
+                        {
+                            ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
+                        }
+                    }
+                }
+            }
+        }
+
+        public void SaveToStream(Stream stream)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

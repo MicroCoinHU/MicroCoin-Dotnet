@@ -1,4 +1,22 @@
-﻿using MicroCoin.Common;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// NetworkPacket.cs - Copyright (c) 2019 Németh Péter
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using MicroCoin.Common;
 using MicroCoin.Protocol;
 using System;
 using System.IO;
@@ -8,7 +26,7 @@ namespace MicroCoin.Net
     public class NetworkPacket
     {
         public PacketHeader Header { get; private set; }
-        public byte[] Data { get; set; }
+        public byte[] RawData { get; set; }
         public NetClient Client { get; set; }
 
         public NetworkPacket(NetOperationType netOperationType, RequestType requestType)
@@ -36,13 +54,13 @@ namespace MicroCoin.Net
         public NetworkPacket(PacketHeader header, byte[] data)
         {
             Header = header;
-            Data = data;
+            RawData = data;
         }
 
         public TPacket Payload<TPacket>() where TPacket : class, IStreamSerializable, new()
         {
             TPacket message = new TPacket();
-            using (var ms = new MemoryStream(Data))
+            using (var ms = new MemoryStream(RawData))
             {
                 message.LoadFromStream(ms);
             }
@@ -70,7 +88,7 @@ namespace MicroCoin.Net
                 {
                     message.SaveToStream(ms);
                     ms.Position = 0;
-                    Data = ms.ToArray();
+                    RawData = ms.ToArray();
                 }
             }
         }

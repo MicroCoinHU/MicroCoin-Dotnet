@@ -1,39 +1,42 @@
-﻿using LiteDB;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// BlockChainLiteDbFileStorage.cs - Copyright (c) 2019 Németh Péter
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using LiteDB;
 using MicroCoin.Cryptography;
 using MicroCoin.Transactions;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
 {
     class BlockChainLiteDbFileStorage : IBlockChain, IDisposable
     {
-        private LiteDatabase db = new LiteDatabase("blocks.file.db");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blocks.file.db;Async=true");
 
         public BlockChainLiteDbFileStorage()
-        {
-            var mapper = BsonMapper.Global;
-            mapper.Entity<ECKeyPair>().Ignore(p => p.ECParameters).Ignore(p=>p.PublicKey).Ignore(p => p.D).Ignore(p => p.PrivateKey).Ignore(p => p.Name);
-            mapper.Entity<ECSignature>().Ignore(p => p.Signature).Ignore(p => p.SigCompat);
-            mapper.Entity<Block>().Field(p => p.Transactions, "t").Field(p => p.Header, "h");
-            mapper.Entity<BlockHeader>().Field(p => p.AccountKey, "a").Field(p => p.AvailableProtocol, "ap")
-                .Field(p => p.BlockNumber, "bn").Field(p => p.BlockSignature, "bs").Field(p => p.CheckPointHash, "ch")
-                .Field(p => p.CompactTarget, "ct").Field(p => p.Fee, "f").Field(p => p.Nonce, "n")
-                .Field(p => p.Payload, "p").Field(p => p.ProofOfWork, "pow").Field(p => p.ProtocolVersion, "pv")
-                .Field(p => p.Reward, "r").Field(p => p.Timestamp, "ts").Field(p => p.TransactionHash, "th");
-            mapper.Entity<ITransaction>().Field(p => p.AccountKey, "ak").Field  (p => p.SignerAccount, "sa")
-                .Field(p => p.TargetAccount, "ta")
-                .Field(p => p.TransactionType, "t").Field(p => p.Fee, "f").Field(p => p.Payload, "p").Field(p => p.Signature, "s");
-            mapper.RegisterType<Currency>(p=>p.value, p=>new Currency(p.AsDecimal));
-            mapper.RegisterType<Hash>(p=>(byte[])p, p=>p.AsBinary);
-            mapper.RegisterType<ByteString>(p=>(byte[])p, p=>p.AsBinary);
-            mapper.RegisterType<Timestamp>(p=>(DateTime)p, p=>p.AsDateTime);
-            mapper.RegisterType<AccountNumber>(p => (int)p, p=>new AccountNumber((uint)p.AsInt32));
+        {            
+
         }
 
         public int Count
@@ -44,8 +47,14 @@ namespace MicroCoin.BlockChain
             }
         }
 
+        public int BlockHeight => throw new NotImplementedException();
+
         public void AddBlock(Block block)
-        {            
+        {
+            if (!block.Header.IsValid())
+            {
+                throw new Exception("Invalid block!!!");
+            }
             using (var ms = new MemoryStream())
             {
                 var name = block.Header.BlockNumber.ToString();
@@ -56,6 +65,16 @@ namespace MicroCoin.BlockChain
                     ms.CopyTo(ls);
                 }
             }
+        }
+
+        public void AddBlocks(IEnumerable<Block> block)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task AddBlocksAsync(IEnumerable<Block> blocks)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()

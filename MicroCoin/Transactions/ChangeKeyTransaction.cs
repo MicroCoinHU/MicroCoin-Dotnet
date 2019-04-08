@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// ChangeKeyTransaction.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// ChangeKeyTransaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,10 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using MicroCoin.Cryptography;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System.IO;
 using System.Text;
 
@@ -122,7 +120,7 @@ namespace MicroCoin.Transactions
         public override bool IsValid()
         {
             if (!base.IsValid()) return false;
-            if (NewAccountKey.CurveType == CurveType.Empty) return false;
+            if (NewAccountKey.CurveType == ECCurveType.Empty) return false;
             if (NewAccountKey.PublicKey.X.Length == 0) return false;
             if (NewAccountKey.PublicKey.Y.Length == 0) return false;
             return true;

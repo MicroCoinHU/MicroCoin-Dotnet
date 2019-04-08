@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// ListAccountTransaction.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// ListAccountTransaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,10 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using MicroCoin.Cryptography;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System.IO;
 using System.Text;
 
@@ -37,7 +35,12 @@ namespace MicroCoin.Transactions
         public ECKeyPair NewPublicKey { get; set; } = new ECKeyPair();
         public uint LockedUntilBlock { get; set; }
 
-        public ListAccountTransaction(TransactionType type = TransactionType.ListAccountForSale)
+        public ListAccountTransaction()
+        {
+            TransactionType = TransactionType.ListAccountForSale;
+        }
+
+        public ListAccountTransaction(TransactionType type)
         {
             TransactionType = type;
         }
@@ -60,7 +63,7 @@ namespace MicroCoin.Transactions
                     bw.Write(AccountPrice);
                     bw.Write(AccountToPay);
                     AccountKey.SaveToStream(s, false);
-                    if (NewPublicKey.CurveType != CurveType.Empty)
+                    if (NewPublicKey.CurveType != ECCurveType.Empty)
                     {
                         NewPublicKey.SaveToStream(s);
                     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// AccountInfo.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// AccountInfo.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,10 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using MicroCoin.Cryptography;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System;
 using System.IO;
 
@@ -98,14 +96,14 @@ namespace MicroCoin.Chain
 
         internal void LoadFromStream(BinaryReader br)
         {
-            ushort unused = br.ReadUInt16();
+            _ = br.ReadUInt16();
             ushort stateOrKeyType = br.ReadUInt16();
             switch (stateOrKeyType)
             {
-                case (ushort)CurveType.Secp256K1:
-                case (ushort)CurveType.Secp384R1:
-                case (ushort)CurveType.Secp521R1:
-                case (ushort)CurveType.Sect283K1:
+                case (ushort)ECCurveType.Secp256K1:
+                case (ushort)ECCurveType.Secp384R1:
+                case (ushort)ECCurveType.Secp521R1:
+                case (ushort)ECCurveType.Sect283K1:
                     br.BaseStream.Position -= 2;
                     State = AccountState.Normal;
                     AccountKey = new ECKeyPair();

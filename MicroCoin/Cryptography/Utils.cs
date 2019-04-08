@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// Utils.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// Utils.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Asn1.X9;
@@ -72,7 +70,7 @@ namespace MicroCoin.Cryptography
                     SigCompat = sigBytes
                 };
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return new ECSignature();
             }

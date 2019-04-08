@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// ServiceLocator.cs - Copyright (c) 2019 Németh Péter
+// Node.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,18 +16,41 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using Microsoft.Extensions.DependencyInjection;
-using Prism.Events;
+using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
-namespace MicroCoin.Common
+namespace MicroCoin.Net
 {
-    internal static class ServiceLocator
+    public class Node
     {
-        public static ServiceProvider ServiceProvider { get; set; }
-        public static T GetService<T>() => ServiceProvider.GetService<T>();
-        public static IEventAggregator EventAggregator => ServiceProvider.GetService<IEventAggregator>();
+        public ByteString IP { get; set; }
+        public ushort Port { get; set; }
+        public Timestamp LastConnection { get; set; }
+        public IPEndPoint EndPoint { get => new IPEndPoint(IPAddress.Parse(IP), Port); }
+        public TcpClient TcpClient { get; set; }
+        public bool Connected { get; set; }
+        public ushort ServerPort { get; internal set; }
+        public uint BlockHeight { get; set; } = 0;
+        private readonly object _clientLock = new object();
+        public override string ToString()
+        {
+            return IP + ":" + Port;
+        }
+
+        public void LoadFromStream(Stream stream)
+        {
+            using(var br = new BinaryReader(stream))
+            {
+                IP = br.ReadBytes(br.ReadUInt16());
+                Port = br.ReadUInt16();
+                LastConnection = br.ReadUInt32();
+                ServerPort = Params.ServerPort;
+            }
+        }
     }
 }

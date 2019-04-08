@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// Transaction.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// Transaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using MicroCoin.Cryptography;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System.IO;
 using System.Text;
 
@@ -34,9 +34,9 @@ namespace MicroCoin.Transactions
         {
             get
             {
-                if (_payload.IsReadable) return _payload;
-                ByteString bs = (string)(new Hash(_payload));
-                return bs;
+//                if (_payload.IsReadable) return _payload;
+//                ByteString bs = (string)(new Hash(_payload));
+                return _payload;
             }
             set => _payload = value;
         }

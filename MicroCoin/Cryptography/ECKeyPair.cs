@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// ECKeyPair.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// ECKeyPair.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,9 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
@@ -34,7 +32,7 @@ using System.Threading.Tasks;
 
 namespace MicroCoin.Cryptography
 {
-    public enum CurveType : ushort
+    public enum ECCurveType : ushort
     {
         Empty = 0,
         Secp256K1 = 714,
@@ -45,7 +43,7 @@ namespace MicroCoin.Cryptography
 
     public class ECKeyPair : IEquatable<ECKeyPair>
     {
-        public CurveType CurveType { get; set; } = CurveType.Empty;
+        public ECCurveType CurveType { get; set; } = ECCurveType.Empty;
         public byte[] D { get; set; }
         public Org.BouncyCastle.Math.BigInteger PrivateKey
         {
@@ -95,8 +93,10 @@ namespace MicroCoin.Cryptography
         public static async Task<ECKeyPair> ImportAsync(string hex) => await Task.Run(() => Import(hex));
         public static ECKeyPair Import(string hex)
         {
-            ECKeyPair keyPair = new ECKeyPair();
-            keyPair.CurveType = CurveType.Secp256K1;
+            ECKeyPair keyPair = new ECKeyPair
+            {
+                CurveType = ECCurveType.Secp256K1
+            };
             var privKeyInt = new Org.BouncyCastle.Math.BigInteger(+1, (Hash)hex);
             var parameters = SecNamedCurves.GetByName("secp256k1");
             var ecPoint = parameters.G.Multiply(privKeyInt);
@@ -131,7 +131,7 @@ namespace MicroCoin.Cryptography
                 if (writeName) Name.SaveToStream(bw);
                 if (writeLength) bw.Write((ushort)len);
                 bw.Write((ushort)CurveType);
-                if (CurveType == CurveType.Empty)
+                if (CurveType == ECCurveType.Empty)
                 {
                     bw.Write((ushort)0);
                     bw.Write((ushort)0);
@@ -141,7 +141,7 @@ namespace MicroCoin.Cryptography
                 byte[] x = PublicKey.X;
                 bw.Write(xLen);
                 bw.Write(x, x[0] == 0 ? 1 : 0, x.Length - (x[0] == 0 ? 1 : 0));
-                if (CurveType == CurveType.Sect283K1)
+                if (CurveType == ECCurveType.Sect283K1)
                 {
                     byte[] b = PublicKey.Y;
                     bw.Write(yLen);
@@ -174,7 +174,7 @@ namespace MicroCoin.Cryptography
             ECPublicKeyParameters pubParams = (ECPublicKeyParameters)keypair.Public;
             ECKeyPair k = new ECKeyPair
             {
-                CurveType = CurveType.Secp256K1,
+                CurveType = ECCurveType.Secp256K1,
                 PrivateKey = privParams.D,
                 Name = name
             };
@@ -198,7 +198,7 @@ namespace MicroCoin.Cryptography
                     if (len == 0) return;
                 }
 
-                CurveType = (CurveType)br.ReadUInt16();
+                CurveType = (ECCurveType)br.ReadUInt16();
                 ushort xLen = br.ReadUInt16();
                 var X = br.ReadBytes(xLen);
                 ushort yLen = br.ReadUInt16();

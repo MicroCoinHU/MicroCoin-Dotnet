@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// ByteArrayExtensions.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// ByteArrayExtensions.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace MicroCoin.Utils
+namespace MicroCoin.Types
 {
     public static class ByteArrayExtensions{
         public static string ToAnsiString(this byte[] b)

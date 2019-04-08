@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// BlockResponse.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// BlockResponse.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-
-
 using MicroCoin.BlockChain;
 using System.Collections.Generic;
 using System.IO;
@@ -30,17 +28,19 @@ namespace MicroCoin.Protocol
     {
         public List<Block> Blocks { get; set; }
         public uint TransactionCount { get; set; }
+
         public BlockResponse()
         {
         }
-        public void SaveToStream(Stream s)
+
+        public void SaveToStream(Stream stream)
         {
-            using (BinaryWriter bw = new BinaryWriter(s))
+            using (BinaryWriter bw = new BinaryWriter(stream, Encoding.ASCII, true))
             {
                 bw.Write((uint)Blocks.Count);
                 foreach (var b in Blocks)
                 {
-                    b.SaveToStream(s);
+                    b.SaveToStream(stream);
                 }
             }
         }
@@ -59,10 +59,7 @@ namespace MicroCoin.Protocol
                     }
                     try
                     {
-                        long pos = stream.Position;
-                        Block op = new Block();
-                        op.LoadFromStream(stream);
-                        Blocks.Add(op);
+                        Blocks.Add(new Block(stream));
                     }
                     catch (EndOfStreamException e)
                     {

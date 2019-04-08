@@ -16,4 +16,8 @@
     <Folder Include="Account\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\zlib\zlib.net.csproj" />
+  </ItemGroup>
+
 </Project>

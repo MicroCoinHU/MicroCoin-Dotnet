@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2019 Peter Nemeth
-// BlockRequest.cs - Copyright (c) 2019 Németh Péter
+// Copyright (c) 2018 Peter Nemeth
+// CheckPointRequest.cs - Copyright (c) 2018 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,36 +16,45 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+
+
 using MicroCoin.Common;
+using MicroCoin.Types;
 using System.IO;
 using System.Text;
 
 namespace MicroCoin.Protocol
 {
-    public class BlockRequest : IStreamSerializable
+    public class CheckPointRequest : IStreamSerializable
     {
+        public uint CheckPointBlockCount { get; set; }
+        public Hash CheckPointHash { get; set; }
         public uint StartBlock { get; set; }
         public uint EndBlock { get; set; }
-        public uint NumberOfBlocks { get; set; }
-
-        public BlockRequest()
+        public CheckPointRequest()
         {
+
         }
 
         public void LoadFromStream(Stream s)
         {
-            using (BinaryReader br = new BinaryReader(s, Encoding.ASCII, true)) {
+            using(BinaryReader br = new BinaryReader(s, Encoding.Default, true))
+            {
+                CheckPointBlockCount = br.ReadUInt32();
+                CheckPointHash = Hash.ReadFromStream(br);
                 StartBlock = br.ReadUInt32();
                 EndBlock = br.ReadUInt32();
             }
         }
 
-
         public void SaveToStream(Stream s)
-        {
-            using(BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true)) {
+        {            
+            using(BinaryWriter bw = new BinaryWriter(s,Encoding.Default, true))
+            {
+                bw.Write(CheckPointBlockCount);
+                CheckPointHash.SaveToStream(bw);
                 bw.Write(StartBlock);
-                bw.Write(NumberOfBlocks+StartBlock-1);
+                bw.Write(EndBlock);
             }
         }
     }

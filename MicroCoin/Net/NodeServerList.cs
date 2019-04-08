@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) 2018 Peter Nemeth
-// NodeServerList.cs - Copyright (c) 2018 Németh Péter
+// Copyright (c) 2019 Peter Nemeth
+// NodeServerList.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ using System.Text;
 
 namespace MicroCoin.Net
 {
-    public class NodeServerList : ConcurrentDictionary<string, NodeServer>, IDisposable
+    public class NodeServerList : ConcurrentDictionary<string, Node>, IDisposable
     {
         internal void SaveToStream(Stream s)
         {            
@@ -41,7 +41,7 @@ namespace MicroCoin.Net
             }
         }
 
-        internal void TryAddNew(string key, NodeServer nodeServer)
+        internal void TryAddNew(string key, Node nodeServer)
         {
             if (ContainsKey(key)) return;
             TryAdd(key, nodeServer);
@@ -55,7 +55,7 @@ namespace MicroCoin.Net
                 uint serverCount = br.ReadUInt32();
                 for(int i = 0; i < serverCount; i++)
                 {
-                    NodeServer server = new NodeServer();
+                    Node server = new Node();
                     ushort iplen = br.ReadUInt16();
                     server.IP = br.ReadBytes(iplen);
                     server.Port = br.ReadUInt16();
@@ -81,7 +81,7 @@ namespace MicroCoin.Net
             if (Count <= 100) return;
             foreach (var l in nodeServers)
             {
-                TryRemove(l.Key, out NodeServer n);
+                TryRemove(l.Key, out Node n);
             }
         }
 

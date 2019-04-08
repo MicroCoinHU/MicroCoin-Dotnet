@@ -1,49 +1,112 @@
-﻿using LiteDB;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// BlockChainLiteDbStorage.cs - Copyright (c) 2019 Németh Péter
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using LiteDB;
 using MicroCoin.Cryptography;
 using MicroCoin.Transactions;
-using MicroCoin.Utils;
+using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
 {
     class BlockChainLiteDbStorage : IBlockChain, IDisposable
     {
-        private LiteDatabase db = new LiteDatabase("blocks.db");
+        private readonly LiteDatabase db = new LiteDatabase("blocks.db");
 
         public BlockChainLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
-            mapper.Entity<ECKeyPair>().Ignore(p => p.ECParameters).Ignore(p=>p.PublicKey).Ignore(p => p.D).Ignore(p => p.PrivateKey).Ignore(p => p.Name);
-            mapper.Entity<ECSignature>().Ignore(p => p.Signature).Ignore(p => p.SigCompat);
-            mapper.Entity<Block>().Field(p => p.Transactions, "t").Field(p => p.Header, "h");
-            mapper.Entity<BlockHeader>().Field(p => p.AccountKey, "a").Field(p => p.AvailableProtocol, "ap")
-                .Field(p => p.BlockNumber, "bn").Field(p => p.BlockSignature, "bs").Field(p => p.CheckPointHash, "ch")
-                .Field(p => p.CompactTarget, "ct").Field(p => p.Fee, "f").Field(p => p.Nonce, "n")
-                .Field(p => p.Payload, "p").Field(p => p.ProofOfWork, "pow").Field(p => p.ProtocolVersion, "pv")
-                .Field(p => p.Reward, "r").Field(p => p.Timestamp, "ts").Field(p => p.TransactionHash, "th");
-            mapper.Entity<ITransaction>().Field(p => p.AccountKey, "ak").Field  (p => p.SignerAccount, "sa")
-                .Field(p => p.TargetAccount, "ta")
-                .Field(p => p.TransactionType, "t").Field(p => p.Fee, "f").Field(p => p.Payload, "p").Field(p => p.Signature, "s");
-            mapper.RegisterType<Currency>(p=>p.value, p=>new Currency(p.AsDecimal));
-            mapper.RegisterType<Hash>(p=>(byte[])p, p=>p.AsBinary);
-            mapper.RegisterType<ByteString>(p=>(byte[])p, p=>p.AsBinary);
-            mapper.RegisterType<Timestamp>(p=>(DateTime)p, p=>p.AsDateTime);
-            mapper.RegisterType<AccountNumber>(p => (int)p, p=>new AccountNumber((uint)p.AsInt32));
-            db.Engine.Shrink();
+            mapper.Entity<Block>().Field(p => p.Transactions, "a").Field(p => p.Header, "b");
+            mapper.Entity<ITransaction>()
+                .Field(p => p.AccountKey, "a")
+                .Field(p => p.SignerAccount, "b")
+                .Field(p => p.TargetAccount, "c")
+                .Field(p => p.TransactionType, "d")
+                .Field(p => p.Fee, "e")
+                .Field(p => p.Payload, "f")
+                .Field(p => p.Signature, "g");
+            mapper.Entity<Transaction>()
+                .Field(p => p.AccountKey, "a")
+                .Field(p => p.SignerAccount, "b")
+                .Field(p => p.TargetAccount, "c")
+                .Field(p => p.TransactionType, "d")
+                .Field(p => p.Fee, "e")
+                .Field(p => p.Payload, "f")
+                .Field(p => p.Signature, "g");
+            mapper.Entity<ChangeKeyTransaction>()
+                .Field(p => p.AccountKey, "a")
+                .Field(p => p.SignerAccount, "b")
+                .Field(p => p.TargetAccount, "c")
+                .Field(p => p.TransactionType, "d")
+                .Field(p => p.Fee, "e")
+                .Field(p => p.Payload, "f")
+                .Field(p => p.Signature, "g")
+                .Field(p => p.NumberOfOperations, "h")
+                .Field(p => p.NewAccountKey, "i")
+                .Field(p => p.Amount, "j");                
+            mapper.Entity<ListAccountTransaction>()
+                .Field(p => p.AccountKey, "a")
+                .Field(p => p.SignerAccount, "b")
+                .Field(p => p.TargetAccount, "c")
+                .Field(p => p.TransactionType, "d")
+                .Field(p => p.Fee, "e")
+                .Field(p => p.Payload, "f")
+                .Field(p => p.Signature, "g")
+                .Field(p => p.AccountPrice, "h")
+                .Field(p => p.Amount, "i")
+                .Field(p => p.AccountToPay, "j")
+                .Field(p => p.LockedUntilBlock, "k")
+                .Field(p => p.NewPublicKey, "l")
+                .Field(p => p.NumberOfOperations, "m");                
+            mapper.Entity<TransferTransaction>()
+                .Field(p => p.AccountKey, "a")
+                .Field(p => p.SignerAccount, "b")
+                .Field(p => p.TargetAccount, "c")
+                .Field(p => p.SellerAccount, "d")
+                .Field(p => p.TransactionStyle, "e")
+                .Field(p => p.NumberOfOperations, "f")
+                .Field(p => p.NewAccountKey, "g")
+                .Field(p => p.AccountPrice, "h")
+                .Field(p => p.Amount, "i")
+                .Field(p => p.TransactionType, "j")
+                .Field(p => p.Fee, "k")
+                .Field(p => p.Payload, "l")
+                .Field(p => p.Signature, "m");
+
+
+            //            db.Engine.Shrink();
         }
 
         public int Count
         {
             get
-            {
+            {                
                 return db.GetCollection<Block>().Count();                
             }
         }
+
+        public int BlockHeight => db.GetCollection<Block>().Max(p => p.Id).AsInt32;
 
         public void AddBlock(Block block)
         {
@@ -56,9 +119,22 @@ namespace MicroCoin.BlockChain
             db.GetCollection<Block>().Upsert(block);
         }
 
+        public void AddBlocks(IEnumerable<Block> blocks)
+        {
+            db.GetCollection<Block>().Upsert(blocks);
+        }
+
+        public async Task AddBlocksAsync(IEnumerable<Block> blocks)
+        {
+            await Task.Run(() =>
+            {
+                db.GetCollection<Block>().Upsert(blocks);
+            });
+        }
+
         public void Dispose()
         {
-            db.Shrink();
+//            db.Shrink();
             db.Dispose();
         }
 

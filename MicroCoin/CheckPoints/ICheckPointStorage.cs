@@ -1,9 +1,7 @@
-﻿extensions: designer.cs generated.cs
-extensions: .cs .cpp .h
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
-// Copyright (c) %CreationYear% Peter Nemeth
-// %FileName% - Copyright (c) %CreationYear% %UserDisplayName%
+// Copyright (c) 2019 Peter Nemeth
+// ICheckPointStorage.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,11 +16,19 @@ extensions: .cs .cpp .h
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-extensions: .aspx .ascx
-<%-- 
---%>
-extensions: .vb
-'
-extensions:  .xml .config .xsd
-<!--
--->
+using MicroCoin.Chain;
+using MicroCoin.Types;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace MicroCoin.CheckPoints
+{
+    public interface ICheckPointStorage
+    {
+        void AddBlock(CheckPointBlock block);
+        void AddBlocks(IEnumerable<CheckPointBlock> block);
+        CheckPointBlock GetBlock(int blockNumber);
+        Account GetAccount(AccountNumber accountNumber);
+    }
+}
