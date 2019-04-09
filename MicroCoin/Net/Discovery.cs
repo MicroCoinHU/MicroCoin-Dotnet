@@ -8,6 +8,7 @@ using MicroCoin.Protocol;
 using MicroCoin.BlockChain;
 using MicroCoin.Common;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MicroCoin.Net
 {
@@ -16,11 +17,13 @@ namespace MicroCoin.Net
     public class Discovery : IDiscovery
     {
         private readonly IPeerManager peerManager;
+        private readonly ILogger<Discovery> logger;
         private Thread discoveryThread;
 
-        public Discovery(IPeerManager peerManager)
+        public Discovery(IPeerManager peerManager, ILogger<Discovery> logger)
         {
             this.peerManager = peerManager;
+            this.logger = logger;
             discoveryThread = new Thread(Discover)
             {
                 Name = "discovery"
@@ -42,7 +45,7 @@ namespace MicroCoin.Net
         {
             HelloRequest request = HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>());
             NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
-            Console.WriteLine("Discoverfixed");
+            logger.LogTrace("Discoverfixed");
             foreach (var server in Params.FixedSeedServers)
             {
                 var node = new Node
@@ -58,25 +61,25 @@ namespace MicroCoin.Net
                 {
                     try
                     {
-                        Console.WriteLine("Send hello");
+                        logger.LogTrace("Send hello");
                         var hello = await cl.SendAndWaitAsync(networkPacket);
                         node.BlockHeight = hello.Payload<HelloResponse>().Block.Header.BlockNumber;
                         peerManager.AddNew(node);
-                        Console.WriteLine("{0} alive", server.Address);
+                        logger.LogInformation("{0} alive", server.Address);
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("{0} dead", server.Address);
+                        logger.LogWarning("{0} dead", server.Address);
                         cl.Dispose();
                     }
                 }
                 else
                 {
-                    Console.WriteLine("{0} dead", server.Address);
+                    logger.LogWarning("{0} dead", server.Address);
                     cl.Dispose();
                 }
             }
-            Console.WriteLine("Fixed ended");
+            logger.LogTrace("Fixed ended");
             return peerManager.GetNodes().Count() > 0;
         }
 
@@ -106,17 +109,17 @@ namespace MicroCoin.Net
                     var nodesToConnect = peerManager.GetNodes().Where(p => p.Connected == false);
                     foreach (var elem in nodesToConnect)
                     {
-                        Console.WriteLine("Discovering peer: {0}", elem.EndPoint);
+                        logger.LogDebug("Discovering peer: {0}", elem.EndPoint);
                         var client = ServiceLocator.GetService<INetClient>();
                         client.Connect(elem);
-                        if (elem.NetClient!=null && elem.NetClient.IsConnected)
+                        if (elem.NetClient != null && elem.NetClient.IsConnected)
                         {
                             elem.NetClient.Start();
-                            Console.WriteLine("Peer {0} alive", elem.EndPoint);
+                            logger.LogInformation("Peer {0} alive", elem.EndPoint);
                         }
                         else
                         {
-                            Console.WriteLine("Peer {0} died", elem.EndPoint);
+                            logger.LogWarning("Peer {0} died", elem.EndPoint);
                             elem.NetClient?.Dispose();
                             elem.NetClient = null;
                             peerManager.Remove(elem);
@@ -124,7 +127,8 @@ namespace MicroCoin.Net
                     }
                     Thread.Sleep(1000);
                 }
-            }catch(ThreadInterruptedException e)
+            }
+            catch (ThreadInterruptedException e)
             {
                 return;
             }

@@ -31,6 +31,11 @@ using Prism.Events;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using NLog;
+using NLog.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using LogLevel = NLog.LogLevel;
+using MicroCoin.Transactions;
 
 namespace MicroCoin
 {
@@ -87,11 +92,20 @@ namespace MicroCoin
                 .Field(p => p.Timestamp, "m")
                 .Field(p => p.TransactionHash, "n");
 
+            var config = new NLog.Config.LoggingConfiguration();
+
+            var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole");
+            logconsole.UseDefaultRowHighlightingRules = true;
+            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
+
+            LogManager.Configuration = config;
+
             ServiceLocator.ServiceProvider = new ServiceCollection()
                 .AddSingleton<IEventAggregator, EventAggregator>()
                 .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>()
                 .AddSingleton<IBlockChain, BlockChain.BlockChainService>()
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
+                .AddSingleton<ICheckPointService, CheckPointService>()
                 .AddSingleton<IPeerManager, PeerManager>()
                 .AddSingleton<IHandler<HelloRequest>, HelloHandler>()
                 .AddSingleton<IHandler<HelloResponse>, HelloHandler>()
@@ -100,7 +114,22 @@ namespace MicroCoin
                 .AddSingleton<IHandler<CheckPointResponse>, CheckPointHandler>()
                 .AddSingleton<IDiscovery, Discovery>()
                 .AddTransient<INetClient, NetClient>()
+                .AddSingleton<ITransactionValidator<TransferTransaction>, TransferTransactionValidator>()
+                .AddSingleton<ITransactionValidator<ChangeKeyTransaction>, ChangeKeyTransactionValidator>()
+                .AddSingleton<ITransactionValidator<ChangeAccountInfoTransaction>, ChangeAccountInfoTransactionValidator>()
+                .AddLogging(builder =>
+                {
+                    builder.SetMinimumLevel( Microsoft.Extensions.Logging.LogLevel.Trace);
+                   
+                    builder.AddNLog(new NLogProviderOptions()
+                    {
+                        CaptureMessageTemplates = true,
+                        CaptureMessageProperties = true,                       
+                    });
+                })
                 .BuildServiceProvider();
+
+            ServiceLocator.GetService<ICheckPointService>().LoadFromBlockChain();
 
             ServiceLocator
                 .GetService<IEventAggregator>()
@@ -131,7 +160,7 @@ namespace MicroCoin
 
             ServiceLocator.EventAggregator.GetEvent<BlocksAdded>().Subscribe(t =>
             {
-                Console.WriteLine("Added {0} block(s) to blockchain from {1} to {2}", t.Count(), t.First().Id, t.Last().Id);
+                Console.WriteLine("Added block#{0} to blockchain", t.Id);
             }, ThreadOption.BackgroundThread, false);
 
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
@@ -190,7 +219,6 @@ namespace MicroCoin
             }
 
             ServiceLocator.GetService<IDiscovery>().Start();
-
             Console.ReadLine();
             ServiceLocator.ServiceProvider.Dispose();
         }

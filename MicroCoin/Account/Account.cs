@@ -64,7 +64,7 @@ namespace MicroCoin.Chain
 
         public Account()
         {
-
+            AccountInfo = new AccountInfo();
         }
 
         public Account Clone()

@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -63,6 +65,17 @@ namespace MicroCoin.Transactions
                     {
                         bw.Write(AccountKey.PublicKey.X);
                         bw.Write(AccountKey.PublicKey.Y);
+                    }
+                    if(TransactionStyle == TransferType.BuyAccount)
+                    {
+                        bw.Write(AccountPrice);
+                        bw.Write(SellerAccount);
+                        bw.Write((ushort)AccountKey.CurveType);
+                        if(NewAccountKey?.PublicKey.X != null && NewAccountKey.PublicKey.X.Length > 0 && NewAccountKey.PublicKey.Y.Length > 0)
+                        {
+                            bw.Write(NewAccountKey.PublicKey.X);
+                            bw.Write(NewAccountKey.PublicKey.Y);
+                        }
                     }
                     ms.Position = 0;
                     byte[] b = ms.ToArray();
@@ -141,23 +154,72 @@ namespace MicroCoin.Transactions
 
         public override IList<Account> Apply(ICheckPointService checkPointService)
         {
-            var signer = checkPointService.GetAccount(SignerAccount).Clone();
-            var target = checkPointService.GetAccount(TargetAccount).Clone();
-            if (signer.AccountInfo.State != AccountState.Normal)
-                throw new Exception("Invalid account state");
+            var sender = checkPointService.GetAccount(SignerAccount);
+            var target = checkPointService.GetAccount(TargetAccount);
+            var seller = checkPointService.GetAccount(SellerAccount);
 
-            if (signer.Balance < (Amount + Fee))
+            if (TransactionStyle == TransferType.Transaction)
             {
-                throw new Exception("Not enough money");
+                sender.Balance -= Amount;
+                sender.Balance -= Fee;
+                target.Balance += Amount;
+                sender.NumberOfOperations++;
+                return new List<Account> { sender, target };
             }
-
-            target.Balance += Amount;
-            signer.Balance -= Fee;
-            signer.Balance -= Amount;
-
-            return new List<Account>() {
-                signer, target
-            };
+            if(TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
+            {
+                seller.Balance += Amount;
+                sender.Balance -= Amount;
+                sender.Balance -= Fee;
+                target.AccountInfo.AccountKey = NewAccountKey;
+                sender.NumberOfOperations++;
+                return new List<Account>() { sender, target, seller };
+            }
+            return new List<Account>();
         }
     }
+
+    public class TransferTransactionValidator : ITransactionValidator<TransferTransaction>
+    {
+        private readonly ICheckPointService checkPointService;
+        private readonly IBlockChain blockChain;
+        public TransferTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
+        {
+            this.checkPointService = checkPointService;
+            this.blockChain = blockChain;
+        }
+
+        public bool IsValid(TransferTransaction transaction)
+        {            
+            if (transaction.Amount < 0) return false;
+            if (transaction.Fee < 0) return false;
+            var senderAccount = checkPointService.GetAccount(transaction.SignerAccount);
+            if (transaction.Payload.Length > 0)
+            {
+                Debug.WriteLine("OK");
+            }
+            if(!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
+            {
+                return false;
+            }
+            if (transaction.TransactionStyle == TransferTransaction.TransferType.Transaction)
+            {
+                if (transaction.TargetAccount.Equals(transaction.SignerAccount)) return false;
+                if (senderAccount.Balance < (transaction.Amount + transaction.Fee)) return false;
+                var blockHeight = blockChain.BlockHeight;
+                if (5 * ((blockHeight) + 1) < senderAccount.AccountNumber) return false;
+                if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
+                if (senderAccount.NumberOfOperations + 1 != transaction.NumberOfOperations) return false;
+                var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
+                if (5 * ((blockHeight) + 1) < targetAccount.AccountNumber) return false;
+            }
+            if(transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
+            {
+                if (transaction.SellerAccount == transaction.TargetAccount) return false;
+                if (transaction.SignerAccount == transaction.TargetAccount) return false;
+            }
+            return true;
+        }
+    }
+
 }

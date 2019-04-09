@@ -8,5 +8,6 @@ namespace MicroCoin.CheckPoints
     {
         void ApplyBlock(Block block);
         Account GetAccount(AccountNumber accountNumber);
+        void LoadFromBlockChain();
     }
 }

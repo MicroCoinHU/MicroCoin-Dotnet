@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
@@ -109,7 +110,49 @@ namespace MicroCoin.Transactions
 
         public override IList<Account> Apply(ICheckPointService checkPointService)
         {
-            throw new System.NotImplementedException();
+            var signer = checkPointService.GetAccount(this.SignerAccount);
+            var target = checkPointService.GetAccount(this.TargetAccount);
+            signer.Balance -= Fee;
+            signer.NumberOfOperations++;
+            if (ChangeType == (byte)AccountInfoChangeType.AccountName)
+            {
+                target.Name = NewName;
+            }
+            else if (ChangeType == (byte)AccountInfoChangeType.AccountType)
+            {
+                target.AccountType = NewType;
+            }
+            else if (ChangeType == (byte)AccountInfoChangeType.PublicKey)
+            {
+                target.AccountInfo.AccountKey = NewAccountKey;
+            }
+            return new List<Account>() { target, signer };
         }
     }
+
+    public class ChangeAccountInfoTransactionValidator : ITransactionValidator<ChangeAccountInfoTransaction>
+    {
+        private readonly ICheckPointService checkPointService;
+        private readonly IBlockChain blockChain;
+        public ChangeAccountInfoTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
+        {
+            this.checkPointService = checkPointService;
+            this.blockChain = blockChain;
+        }
+
+        public bool IsValid(ChangeAccountInfoTransaction transaction)
+        {
+            if (transaction.Fee < 0) return false;
+            if (!transaction.IsValid()) return false;
+            var signerAccount = checkPointService.GetAccount(transaction.SignerAccount);
+            var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
+            if (signerAccount.Balance < transaction.Fee) return false;
+            if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+
 }

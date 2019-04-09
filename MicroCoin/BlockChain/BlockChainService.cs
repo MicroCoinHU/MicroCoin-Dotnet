@@ -1,12 +1,12 @@
-﻿using Prism.Events;
+﻿using MicroCoin.CheckPoints;
+using Prism.Events;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
 {
-    public class BlocksAdded : PubSubEvent<IEnumerable<Block>> { }
+    public class BlocksAdded : PubSubEvent<Block> { }
 
     public class BlockChainService : IBlockChain
     {
@@ -24,20 +24,29 @@ namespace MicroCoin.BlockChain
 
         public void AddBlock(Block block)
         {
+            if (!block.Header.IsValid()) return;
             blockChainStorage.AddBlock(block);
-            eventAggregator.GetEvent<BlocksAdded>().Publish(new HashSet<Block>() { block });
+            try
+            {
+                eventAggregator.GetEvent<BlocksAdded>().Publish(block);
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
         }
 
         public void AddBlocks(IEnumerable<Block> blocks)
         {
-            blockChainStorage.AddBlocks(blocks);
-            eventAggregator.GetEvent<BlocksAdded>().Publish(blocks);
+            foreach (var block in blocks)
+            {
+                AddBlock(block);
+            }
         }
 
         public async Task AddBlocksAsync(IEnumerable<Block> blocks)
         {
-            await AddBlocksAsync(blocks);
-            eventAggregator.GetEvent<BlocksAdded>().Publish(blocks);
+            await blockChainStorage.AddBlocksAsync(blocks);
         }
 
         public void Dispose()

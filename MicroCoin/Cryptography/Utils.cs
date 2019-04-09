@@ -78,15 +78,14 @@ namespace MicroCoin.Cryptography
 
         public static bool ValidateSignature(Hash data, ECSignature signature, ECKeyPair keyPair)
         {
-
             var derSignature = new DerSequence(
-                new DerInteger(new BigInteger(1, signature.Signature.Take(32).ToArray())),
-                new DerInteger(new BigInteger(1, signature.Signature.Skip(32).ToArray())))
+                new DerInteger(new BigInteger(1, signature.R)),
+                new DerInteger(new BigInteger(1, signature.S)))
                 .GetDerEncoded();
             ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
             X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());
             ECDomainParameters domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
-            FpCurve c = (FpCurve)curve.Curve;
+            Org.BouncyCastle.Math.EC.ECCurve c = (Org.BouncyCastle.Math.EC.ECCurve)curve.Curve;
             var publicKey = c.CreatePoint(new BigInteger(+1, keyPair.PublicKey.X), new BigInteger(+1, keyPair.PublicKey.Y));
             ECPublicKeyParameters publicKeyParameters = new ECPublicKeyParameters(publicKey, domain);
             signer.Init(false, publicKeyParameters);

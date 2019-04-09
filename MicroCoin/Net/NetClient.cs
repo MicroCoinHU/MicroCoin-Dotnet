@@ -27,6 +27,7 @@ using MicroCoin.Common;
 using MicroCoin.Types;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MicroCoin.Net
 {
@@ -37,6 +38,7 @@ namespace MicroCoin.Net
     {
         private readonly object clientLock = new object();
         private readonly IEventAggregator eventAggregator;
+        private readonly ILogger<NetClient> logger;
 
         protected TcpClient TcpClient { get; set; } = new TcpClient();
         private Thread Thread { get; set; }
@@ -44,9 +46,10 @@ namespace MicroCoin.Net
         public bool IsConnected { get => TcpClient == null ? false : TcpClient.Connected; }
         public bool Started { get; set; }
 
-        public NetClient(IEventAggregator eventAggregator)
+        public NetClient(IEventAggregator eventAggregator, ILogger<NetClient> logger)
         {
             this.eventAggregator = eventAggregator;
+            this.logger = logger;
         }
         public bool Connect(Node node, int timeout = 500)
         {
@@ -120,7 +123,7 @@ namespace MicroCoin.Net
                             {
                                 ByteString message = ByteString.ReadFromStream(br);
                                 string error = message;
-                                Console.WriteLine(error);
+                                logger.LogError(error);
                                 throw new Exception(error);
                             }
                             if (header.RequestType != RequestType.Response || header.Operation != packet.Header.Operation || header.RequestId != packet.Header.RequestId)
@@ -144,7 +147,7 @@ namespace MicroCoin.Net
         {
             lock (clientLock)
             {
-                Console.WriteLine("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
+                logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
                 using (var sendStream = new MemoryStream())
                 {
                     packet.Header.DataLength = packet.RawData.Length;
@@ -194,7 +197,7 @@ namespace MicroCoin.Net
                                 if (header.Error > 0)
                                 {
                                     ByteString message = ByteString.ReadFromStream(br);
-                                    Console.WriteLine(this.TcpClient.Client.RemoteEndPoint.ToString() + " " + message);
+                                    logger.LogError(this.TcpClient.Client.RemoteEndPoint.ToString() + " " + message);
                                     break;
                                 }
                                 var packet = new NetworkPacket(header)
@@ -208,7 +211,7 @@ namespace MicroCoin.Net
                     }
                     catch (IOException e)
                     {
-                        Console.WriteLine(Node.EndPoint + " " + e.Message);
+                        logger.LogWarning(Node.EndPoint + " " + e.Message);
                         return;
                     }
                 }
@@ -217,7 +220,7 @@ namespace MicroCoin.Net
             {
                 if (TcpClient.Connected)
                 {
-                    Console.WriteLine("Disconnected from {0}", Node?.EndPoint.ToString());
+                    logger.LogInformation("Disconnected from {0}", Node?.EndPoint.ToString());
                     TcpClient.Close();
                 }
             }
