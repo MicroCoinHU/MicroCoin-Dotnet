@@ -16,8 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -26,7 +29,6 @@ namespace MicroCoin.Transactions
     public abstract class Transaction : ITransaction
     {
         private ByteString _payload;
-
         public AccountNumber SignerAccount { get; set; }
         public uint NumberOfOperations { get; set; }
         public AccountNumber TargetAccount { get; set; }
@@ -48,10 +50,12 @@ namespace MicroCoin.Transactions
         public abstract void SaveToStream(Stream s);
         public abstract void LoadFromStream(Stream s);
         public TransactionType TransactionType { get; set; }
+
         public ECSignature GetSignature()
         {
-            return Cryptography.Utils.GenerateSignature(GetHash(), AccountKey);
+            return Utils.GenerateSignature(GetHash(), AccountKey);
         }
+
         public bool SignatureValid()
         {
             return true;
@@ -78,7 +82,7 @@ namespace MicroCoin.Transactions
                         SaveToStream(m);
                         data = m.ToArray();                                                
                     }
-                    Hash hh = Cryptography.Utils.RipeMD160(data);
+                    Hash hh = Utils.RipeMD160(data);
                     string s = hh;
                     s = s.Substring(0, 20);
                     bw.Write(Encoding.ASCII.GetBytes(s), 0, 20);
@@ -99,5 +103,7 @@ namespace MicroCoin.Transactions
                 return ms.ToArray();
             }
         }
+
+        abstract public IList<Account> Apply(ICheckPointService checkPointService);
     }
 }

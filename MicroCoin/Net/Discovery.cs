@@ -17,12 +17,10 @@ namespace MicroCoin.Net
     {
         private readonly IPeerManager peerManager;
         private Thread discoveryThread;
-        private readonly IBlockChain blockChain;
 
-        public Discovery(IPeerManager peerManager, IBlockChain blockChain)
+        public Discovery(IPeerManager peerManager)
         {
             this.peerManager = peerManager;
-            this.blockChain = blockChain;
             discoveryThread = new Thread(Discover)
             {
                 Name = "discovery"

@@ -16,8 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -124,6 +127,11 @@ namespace MicroCoin.Transactions
             if (NewAccountKey.PublicKey.X.Length == 0) return false;
             if (NewAccountKey.PublicKey.Y.Length == 0) return false;
             return true;
+        }
+
+        public override IList<Account> Apply(ICheckPointService checkPointService)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

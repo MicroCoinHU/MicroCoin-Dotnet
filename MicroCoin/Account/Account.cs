@@ -67,6 +67,16 @@ namespace MicroCoin.Chain
 
         }
 
+        public Account Clone()
+        {
+            using(var bw = new BinaryWriter(new MemoryStream()))
+            {
+                SaveToStream(bw, true, true);
+                var account = new Account(bw.BaseStream);
+                return account;
+            }
+        }
+
         public Account(Stream s)
         {
             LoadFromStream(s);

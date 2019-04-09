@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// NewBlockRequest.cs - Copyright (c) 2019 Németh Péter
+// IBlockChainStorage.cs - Copyright (c) 2019 NÃ©meth PÃ©ter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,37 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.BlockChain;
-using MicroCoin.Common;
-using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace MicroCoin.Protocol
+namespace MicroCoin.BlockChain
 {
-    public class NewBlockRequest : IStreamSerializable, INetworkPayload
+    public interface IBlockChainStorage : IDisposable
     {
-        public Block Block { get; set; }
-        public NetOperationType NetOperation => NetOperationType.NewBlock;
-
-        public RequestType RequestType => RequestType.AutoSend;
-
-        public NewBlockRequest()
-        {
-        }
-
-        public NewBlockRequest(Block block) : base()
-        {
-            Block = block;
-        }
-
-        public void SaveToStream(Stream stream)
-        {
-            Block.SaveToStream(stream);
-        }
-
-        public void LoadFromStream(Stream stream)
-        {
-            Block = new Block();
-            Block.LoadFromStream(stream);
-        }
+        void AddBlock(Block block);
+        void AddBlocks(IEnumerable<Block> block);
+        Task AddBlocksAsync(IEnumerable<Block> blocks);
+        Block GetBlock(uint blockNumber);
+        int BlockHeight { get; }
+        int Count { get; }
     }
 }

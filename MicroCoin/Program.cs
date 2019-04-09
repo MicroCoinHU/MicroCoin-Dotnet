@@ -16,25 +16,21 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using LiteDB;
 using MicroCoin.BlockChain;
+using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
+using MicroCoin.Common;
+using MicroCoin.Cryptography;
+using MicroCoin.Handlers;
 using MicroCoin.Net;
 using MicroCoin.Protocol;
 using MicroCoin.Types;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.ComponentModel;
-using System.Text;
 using Prism.Events;
-using System.Threading;
-using MicroCoin.Common;
+using System;
 using System.Linq;
-using MicroCoin.Cryptography;
-using MicroCoin.CheckPoints;
-using LiteDB;
-using MicroCoin.Chain;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using MicroCoin.Handlers;
 
 namespace MicroCoin
 {
@@ -93,7 +89,8 @@ namespace MicroCoin
 
             ServiceLocator.ServiceProvider = new ServiceCollection()
                 .AddSingleton<IEventAggregator, EventAggregator>()
-                .AddSingleton<IBlockChain, BlockChainLiteDbStorage>()
+                .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>()
+                .AddSingleton<IBlockChain, BlockChain.BlockChainService>()
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
                 .AddSingleton<IPeerManager, PeerManager>()
                 .AddSingleton<IHandler<HelloRequest>, HelloHandler>()
@@ -108,22 +105,33 @@ namespace MicroCoin
             ServiceLocator
                 .GetService<IEventAggregator>()
                 .GetEvent<NetworkEvent>()
-                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<HelloRequest>>().Handle, ThreadOption.BackgroundThread,
-                true, (p) => p.Header.Operation == NetOperationType.Hello);
+                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<HelloRequest>>().Handle,
+                ThreadOption.BackgroundThread,
+                false, (p) => p.Header.Operation == NetOperationType.Hello);
 
             ServiceLocator
                 .EventAggregator
                 .GetEvent<NetworkEvent>()
-                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<BlockResponse>>().Handle, ThreadOption.BackgroundThread,
-                false, (p) => p.Header.Operation == NetOperationType.Blocks || p.Header.Operation == NetOperationType.NewBlock);
+                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<BlockResponse>>().Handle,
+                ThreadOption.BackgroundThread,
+                false,
+                (p) => p.Header.Operation == NetOperationType.Blocks || p.Header.Operation == NetOperationType.NewBlock);
 
             ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe(
                 ServiceLocator.ServiceProvider.GetService<IHandler<CheckPointResponse>>().Handle,
-                ThreadOption.BackgroundThread, false, p => p.Header.Operation == NetOperationType.CheckPoint && p.Header.RequestType == RequestType.Response);
+                ThreadOption.BackgroundThread,
+                false,
+                p => p.Header.Operation == NetOperationType.CheckPoint && p.Header.RequestType == RequestType.Response);
 
-            ServiceLocator.EventAggregator.GetEvent<NewServerConnection>().Subscribe((node) => {
-                if(node.NetClient != null && node.Connected)
+            ServiceLocator.EventAggregator.GetEvent<NewServerConnection>().Subscribe((node) =>
+            {
+                if (node.NetClient != null && node.Connected)
                     node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
+            }, ThreadOption.BackgroundThread, false);
+
+            ServiceLocator.EventAggregator.GetEvent<BlocksAdded>().Subscribe(t =>
+            {
+                Console.WriteLine("Added {0} block(s) to blockchain from {1} to {2}", t.Count(), t.First().Id, t.Last().Id);
             }, ThreadOption.BackgroundThread, false);
 
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
@@ -131,9 +139,9 @@ namespace MicroCoin
                 throw new Exception("NO FIX SEEDS FOUND");
             }
 
-            var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p=>p.NetClient != null).OrderByDescending(p => p.BlockHeight);
+            var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
             foreach (var bestNode in bestNodes)
-            {                
+            {
                 var bc = ServiceLocator.GetService<IBlockChain>();
                 if (bestNode.BlockHeight > bc.BlockHeight)
                 {
@@ -145,7 +153,7 @@ namespace MicroCoin
                             Message = new BlockRequest
                             {
                                 StartBlock = (uint)(bc.BlockHeight > 0 ? bc.BlockHeight + 1 : bc.BlockHeight),
-                                NumberOfBlocks = 10000
+                                NumberOfBlocks = 5000
                             }
                         };
                         NetworkPacket response;
@@ -155,7 +163,7 @@ namespace MicroCoin
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine(e.Message+" "+ bestNode.EndPoint.ToString());
+                            Console.WriteLine(e.Message + " " + bestNode.EndPoint.ToString());
                             break;
                         }
                         var blocks = response.Payload<BlockResponse>().Blocks;

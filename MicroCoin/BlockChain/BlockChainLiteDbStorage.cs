@@ -17,20 +17,14 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using LiteDB;
-using MicroCoin.Cryptography;
 using MicroCoin.Transactions;
-using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
 {
-    class BlockChainLiteDbStorage : IBlockChain, IDisposable
+    public class BlockChainLiteDbStorage : IBlockChainStorage
     {
         private readonly LiteDatabase db = new LiteDatabase("blocks.db");
 
@@ -64,7 +58,7 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.Signature, "g")
                 .Field(p => p.NumberOfOperations, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.Amount, "j");                
+                .Field(p => p.Amount, "j");
             mapper.Entity<ListAccountTransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -78,7 +72,7 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.AccountToPay, "j")
                 .Field(p => p.LockedUntilBlock, "k")
                 .Field(p => p.NewPublicKey, "l")
-                .Field(p => p.NumberOfOperations, "m");                
+                .Field(p => p.NumberOfOperations, "m");
             mapper.Entity<TransferTransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -93,16 +87,13 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.Fee, "k")
                 .Field(p => p.Payload, "l")
                 .Field(p => p.Signature, "m");
-
-
-            //            db.Engine.Shrink();
         }
 
         public int Count
         {
             get
-            {                
-                return db.GetCollection<Block>().Count();                
+            {
+                return db.GetCollection<Block>().Count();
             }
         }
 
@@ -110,12 +101,6 @@ namespace MicroCoin.BlockChain
 
         public void AddBlock(Block block)
         {
-            /*
-            var name = block.Header.BlockNumber.ToString();
-            var ls = db.FileStorage.OpenWrite(name, name, null  );
-            block.SaveToStream(ls);
-            ls.Dispose();
-            */
             db.GetCollection<Block>().Upsert(block);
         }
 
@@ -134,24 +119,12 @@ namespace MicroCoin.BlockChain
 
         public void Dispose()
         {
-//            db.Shrink();
             db.Dispose();
         }
 
         public Block GetBlock(uint blockNumber)
         {
             return db.GetCollection<Block>().FindById((int)blockNumber);
-        }
-
-        public ulong GetWorkSum()
-        {
-            ulong worksum = 0;
-            var blocks = db.GetCollection<Block>();
-            for (int i = 0; i < blocks.Count(); i++)
-            {
-                worksum += blocks.FindById(i).Header.CompactTarget;
-            }
-            return worksum;
         }
     }
 }

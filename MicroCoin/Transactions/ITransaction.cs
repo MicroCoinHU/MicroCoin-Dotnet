@@ -16,7 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.IO;
+using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
 
@@ -52,5 +55,6 @@ namespace MicroCoin.Transactions
         bool SignatureValid();
         ECSignature GetSignature();
         Hash GetOpHash(uint block);
+        IList<Account> Apply(ICheckPointService checkPointService);
     }
 }

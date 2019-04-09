@@ -29,7 +29,7 @@ namespace MicroCoin.Handlers
                 Timestamp = DateTime.UtcNow,
                 Version = "2.0.0wN",
                 Block = blockChain.GetBlock((uint)blockChain.BlockHeight),
-                WorkSum = blockChain.GetWorkSum()
+                WorkSum = 0
             };
             packet.Node.NetClient.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response));
             CheckPeers(hello.NodeServers);

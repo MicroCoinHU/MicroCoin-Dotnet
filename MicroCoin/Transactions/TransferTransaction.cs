@@ -16,8 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -29,7 +33,7 @@ namespace MicroCoin.Transactions
         public Currency AccountPrice { get; set; }
         public AccountNumber SellerAccount { get; set; }
         public ECKeyPair NewAccountKey { get; set; }
-        public TransferType TransactionStyle { get; set; }        
+        public TransferType TransactionStyle { get; set; }
 
         public TransferTransaction(Stream stream)
         {
@@ -53,7 +57,7 @@ namespace MicroCoin.Transactions
                     bw.Write(TargetAccount);
                     bw.Write(Amount);
                     bw.Write(Fee);
-                    if (Payload.Length > 0) bw.Write((byte[]) Payload);
+                    if (Payload.Length > 0) bw.Write((byte[])Payload);
                     bw.Write((ushort)AccountKey.CurveType);
                     if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
                     {
@@ -69,7 +73,7 @@ namespace MicroCoin.Transactions
             finally
             {
                 ms?.Dispose();
-            }        
+            }
         }
 
         public override void SaveToStream(Stream s)
@@ -83,7 +87,7 @@ namespace MicroCoin.Transactions
                 bw.Write(Fee);
                 Payload.SaveToStream(bw);
                 AccountKey.SaveToStream(s, false);
-                if(TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
+                if (TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
                 {
                     bw.Write((byte)TransactionStyle);
                     bw.Write(AccountPrice);
@@ -123,7 +127,7 @@ namespace MicroCoin.Transactions
                     }
                 }
                 Signature = new ECSignature(stream);
-                
+
             }
         }
 
@@ -133,6 +137,27 @@ namespace MicroCoin.Transactions
             if (TransactionStyle != TransferType.BuyAccount) return true;
             if (AccountPrice < 0) return false;
             return true;
+        }
+
+        public override IList<Account> Apply(ICheckPointService checkPointService)
+        {
+            var signer = checkPointService.GetAccount(SignerAccount).Clone();
+            var target = checkPointService.GetAccount(TargetAccount).Clone();
+            if (signer.AccountInfo.State != AccountState.Normal)
+                throw new Exception("Invalid account state");
+
+            if (signer.Balance < (Amount + Fee))
+            {
+                throw new Exception("Not enough money");
+            }
+
+            target.Balance += Amount;
+            signer.Balance -= Fee;
+            signer.Balance -= Amount;
+
+            return new List<Account>() {
+                signer, target
+            };
         }
     }
 }
