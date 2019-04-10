@@ -27,6 +27,7 @@ namespace MicroCoin.Chain
 {
     public class Account : IEquatable<Account>
     {
+        public uint Id { get => AccountNumber; set => AccountNumber = value; }
         public bool Saved { get; set; } = true;
         private uint _updatedBlock;
         public AccountNumber AccountNumber { get; set; }

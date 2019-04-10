@@ -86,13 +86,11 @@ namespace MicroCoin.Cryptography
             ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
             X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());
             ECDomainParameters domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
-            Org.BouncyCastle.Math.EC.ECCurve c = (Org.BouncyCastle.Math.EC.ECCurve)curve.Curve;
-            var publicKey = c.CreatePoint(new BigInteger(+1, keyPair.PublicKey.X), new BigInteger(+1, keyPair.PublicKey.Y));
+            var publicKey = curve.Curve.CreatePoint(new BigInteger(+1, keyPair.PublicKey.X), new BigInteger(+1, keyPair.PublicKey.Y));
             ECPublicKeyParameters publicKeyParameters = new ECPublicKeyParameters(publicKey, domain);
             signer.Init(false, publicKeyParameters);
             signer.BlockUpdate(data, 0, data.Length);
-            bool ok = signer.VerifySignature(derSignature);
-            return ok;
+            return signer.VerifySignature(derSignature);
         }
 
         public static byte[] GenerateSharedKey(ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
@@ -104,13 +102,12 @@ namespace MicroCoin.Cryptography
             FpCurve curve = (FpCurve)ecP.Curve;
             ECFieldElement x = curve.FromBigInteger(new BigInteger(1, otherKey.X));
             ECFieldElement y = curve.FromBigInteger(new BigInteger(1, otherKey.Y));
-            Org.BouncyCastle.Math.EC.ECPoint q = curve.CreatePoint(x.ToBigInteger(), y.ToBigInteger());
+            var q = curve.CreatePoint(x.ToBigInteger(), y.ToBigInteger());
             ECPublicKeyParameters pubKey = new ECPublicKeyParameters("ECDH", q, SecObjectIdentifiers.SecP256k1);
             ECPrivateKeyParameters prvkey = new ECPrivateKeyParameters(new BigInteger(1, myKey.D), domain);
             ECDHBasicAgreement agreement = new ECDHBasicAgreement();
             agreement.Init(prvkey);
-            byte[] password = agreement.CalculateAgreement(pubKey).ToByteArrayUnsigned();
-            return password;
+            return agreement.CalculateAgreement(pubKey).ToByteArrayUnsigned();
         }
 
         public static ByteString DecryptString(Hash em, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)

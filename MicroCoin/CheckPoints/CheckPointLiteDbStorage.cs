@@ -19,7 +19,9 @@ namespace MicroCoin.CheckPoints
                 .Field(p => p.Accounts, "a")
                 .Field(p => p.AccumulatedWork, "b")
                 .Field(p => p.BlockHash, "c")
-                .Field(p => p.Header, "d");
+                .Field(p => p.Header, "d")
+                .DbRef(p => p.Accounts, "Account")
+                ;
 
             mapper.Entity<Account>()
                 .Field(p => p.AccountInfo, "a")
@@ -48,11 +50,13 @@ namespace MicroCoin.CheckPoints
 
         public void AddBlock(CheckPointBlock block)
         {
+            db.GetCollection<Account>().Upsert(block.Accounts);
             db.GetCollection<CheckPointBlock>().Upsert(block);
         }
 
         public void AddBlocks(IEnumerable<CheckPointBlock> blocks)
         {
+            db.GetCollection<Account>().Upsert(blocks.SelectMany(p => p.Accounts));
             db.GetCollection<CheckPointBlock>().Upsert(blocks);
         }
 
@@ -62,16 +66,20 @@ namespace MicroCoin.CheckPoints
         }
 
         public Account GetAccount(AccountNumber accountNumber)
-        {            
+        {
+            return db.GetCollection<Account>().FindById((int)accountNumber);
+            /*
+            var acc = 
+            return acc; */
             var block = GetBlock(accountNumber / 5);
             if (block != null)
                 return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-            return null;
+            return null; 
         }
 
         public CheckPointBlock GetBlock(int blockNumber)
         {
-            return db.GetCollection<CheckPointBlock>().FindById(blockNumber);
+            return db.GetCollection<CheckPointBlock>().Include(p => p.Accounts).FindById(blockNumber);
         }
     }
 }

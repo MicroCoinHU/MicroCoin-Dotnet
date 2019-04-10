@@ -1,8 +1,8 @@
-﻿using MicroCoin.CheckPoints;
+﻿using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
@@ -13,27 +13,36 @@ namespace MicroCoin.BlockChain
     {
         private readonly IBlockChainStorage blockChainStorage;
         private readonly IEventAggregator eventAggregator;
+        private readonly ILogger<BlockChainService> logger;
         private readonly List<Block> blockCache = new List<Block>();
 
-        public int BlockHeight {
-            get {
+        public int BlockHeight
+        {
+            get
+            {
                 if (blockCache.Count > 0)
                 {
-                    return (int) blockCache.Max(p => p.Id);
+                    return (int)blockCache.Max(p => p.Id);
                 }
                 return blockChainStorage.BlockHeight;
             }
         }
-        public int Count => blockChainStorage.Count;
+        public int Count => blockChainStorage.Count + blockCache.Count();
 
-        public BlockChainService(IBlockChainStorage blockChainStorage, IEventAggregator eventAggregator)
+        public BlockChainService(IBlockChainStorage blockChainStorage, IEventAggregator eventAggregator, ILogger<BlockChainService> logger)
         {
             this.blockChainStorage = blockChainStorage;
             this.eventAggregator = eventAggregator;
+            this.logger = logger;
         }
 
         public void AddBlock(Block block)
         {
+            if (block.Id <= blockChainStorage.BlockHeight)
+            {
+                logger.LogInformation("Skipping block {0} due my block height is {1}", block.Id, blockChainStorage.BlockHeight);
+                return;
+            }
             if (!block.Header.IsValid()) return;
             blockChainStorage.AddBlock(block);
             try
@@ -50,9 +59,23 @@ namespace MicroCoin.BlockChain
         {
             try
             {
+                uint badBlockNumber = blocks.Max(p => p.Id) + 1;
+                object blockLock = new object();
+                Parallel.ForEach(blocks, (block, state) => {
+                    if (!block.Header.IsValid())
+                    {
+                        lock (blockLock)
+                        {
+                            if (badBlockNumber > block.Id)
+                            {
+                                badBlockNumber = block.Id;
+                            }
+                            state.Stop();
+                        }
+                    }
+                });
                 foreach (var block in blocks)
                 {
-                    if (!block.Header.IsValid()) return;
                     blockCache.Add(block);
                     eventAggregator.GetEvent<BlocksAdded>().Publish(block);
                 }
@@ -71,6 +94,11 @@ namespace MicroCoin.BlockChain
 
         public void Dispose()
         {
+            if (blockCache.Count > 0)
+            {
+                blockChainStorage.AddBlocks(blockCache);
+                blockCache.Clear();
+            }
             return;
         }
 

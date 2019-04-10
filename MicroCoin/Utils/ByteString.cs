@@ -36,7 +36,7 @@ namespace MicroCoin.Types
 
         public static implicit operator ByteString(string s)
         {
-            return new ByteString(s==null?new byte[0]:Encoding.Default.GetBytes(s));
+            return new ByteString(s == null ? new byte[0] : Encoding.Default.GetBytes(s));
         }
 
         public static implicit operator string(ByteString s)

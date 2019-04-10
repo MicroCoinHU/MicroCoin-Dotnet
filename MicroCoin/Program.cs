@@ -161,7 +161,7 @@ namespace MicroCoin
             ServiceLocator.EventAggregator.GetEvent<BlocksAdded>().Subscribe(t =>
             {
                 Console.WriteLine("Added block#{0} to blockchain with {1} transactions", t.Id, t.Transactions == null ? 0 : t.Transactions.Count);
-            }, ThreadOption.BackgroundThread, false);
+            }, ThreadOption.PublisherThread, false);
 
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {

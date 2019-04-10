@@ -30,7 +30,7 @@ namespace MicroCoin.CheckPoints
         }
 
         public Account GetAccount(AccountNumber accountNumber)
-        {            
+        {
             var block = GetBlockForAccount(accountNumber);
             return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
         }
@@ -53,15 +53,17 @@ namespace MicroCoin.CheckPoints
             };
             for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
             {
-                var account = new Account();
-                account.AccountNumber = i;
                 ulong totalFee = 0;
                 if (block.Transactions != null)
                     totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
-                account.Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL;                
-                account.BlockNumber = block.Id;
-                account.NumberOfOperations = 0;
-                account.UpdatedBlock = block.Id;
+                var account = new Account
+                {
+                    AccountNumber = i,
+                    BlockNumber = block.Id,
+                    NumberOfOperations = 0,
+                    UpdatedBlock = block.Id,
+                    Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
+                };
                 account.AccountInfo.AccountKey = block.Header.AccountKey;
                 account.AccountInfo.State = AccountState.Normal;
                 checkPointBlock.Accounts.Add(account);
@@ -74,10 +76,6 @@ namespace MicroCoin.CheckPoints
                     dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
                     if (validator != null)                        
                     {                        
-                        if(item.SignerAccount == 5503)
-                        {
-                            Debug.WriteLine("OK");
-                        }
                         if (!validator.IsValid((dynamic)item))
                         {
                             validator.IsValid((dynamic)item);

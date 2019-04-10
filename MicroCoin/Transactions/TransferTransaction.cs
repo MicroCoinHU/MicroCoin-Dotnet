@@ -23,7 +23,6 @@ using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -49,6 +48,33 @@ namespace MicroCoin.Transactions
 
         public override byte[] GetHash()
         {
+            var bytes = new List<byte>(200);
+            bytes.AddRange(BitConverter.GetBytes(SignerAccount));
+            bytes.AddRange(BitConverter.GetBytes(NumberOfOperations));
+            bytes.AddRange(BitConverter.GetBytes(TargetAccount));
+            bytes.AddRange(BitConverter.GetBytes(Amount));
+            bytes.AddRange(BitConverter.GetBytes(Fee));
+            if (Payload.Length > 0)
+                bytes.AddRange((byte[])Payload);
+            bytes.AddRange(BitConverter.GetBytes((ushort)AccountKey.CurveType));
+            if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
+            {
+                bytes.AddRange(AccountKey.PublicKey.X);
+                bytes.AddRange(AccountKey.PublicKey.Y);
+            }
+            if (TransactionStyle == TransferType.BuyAccount)
+            {
+                bytes.AddRange(BitConverter.GetBytes(AccountPrice));
+                bytes.AddRange(BitConverter.GetBytes(SellerAccount));
+                bytes.AddRange(BitConverter.GetBytes((ushort)NewAccountKey.CurveType));
+                if (NewAccountKey?.PublicKey.X != null && NewAccountKey.PublicKey.X.Length > 0 && NewAccountKey.PublicKey.Y.Length > 0)
+                {
+                    bytes.AddRange(NewAccountKey.PublicKey.X);
+                    bytes.AddRange(NewAccountKey.PublicKey.Y);
+                }
+            }
+            return bytes.ToArray();
+
             MemoryStream ms = new MemoryStream();
             try
             {
@@ -122,7 +148,6 @@ namespace MicroCoin.Transactions
                 Payload = ByteString.ReadFromStream(br);
                 AccountKey = new ECKeyPair();
                 AccountKey.LoadFromStream(stream, false);
-                //stream.Position -= 1;
                 byte b = br.ReadByte();
                 TransactionStyle = (TransferType)b;
                 if (b > 2) { stream.Position -= 1; TransactionStyle = TransferType.Transaction; TransactionType = TransactionType.Transaction; }
@@ -157,7 +182,6 @@ namespace MicroCoin.Transactions
             var sender = checkPointService.GetAccount(SignerAccount);
             var target = checkPointService.GetAccount(TargetAccount);
             var seller = checkPointService.GetAccount(SellerAccount);
-
             if (TransactionStyle == TransferType.Transaction)
             {
                 sender.Balance -= Amount;
@@ -190,14 +214,10 @@ namespace MicroCoin.Transactions
         }
 
         public bool IsValid(TransferTransaction transaction)
-        {            
+        {
             if (transaction.Amount < 0) return false;
             if (transaction.Fee < 0) return false;
             var senderAccount = checkPointService.GetAccount(transaction.SignerAccount);
-            if (transaction.Payload.Length > 0)
-            {
-                Debug.WriteLine("OK");
-            }
             if(!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
             {
                 return false;
@@ -207,13 +227,13 @@ namespace MicroCoin.Transactions
                 if (transaction.TargetAccount.Equals(transaction.SignerAccount)) return false;
                 if (senderAccount.Balance < (transaction.Amount + transaction.Fee)) return false;
                 var blockHeight = blockChain.BlockHeight;
-                if (5 * ((blockHeight) + 1) < senderAccount.AccountNumber) return false;
+                if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
                 if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
                 if (senderAccount.NumberOfOperations + 1 != transaction.NumberOfOperations) return false;
                 var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
-                if (5 * ((blockHeight) + 1) < targetAccount.AccountNumber) return false;
+                if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
             }
-            if(transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
+            else if (transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
             {
                 if (transaction.SellerAccount == transaction.TargetAccount) return false;
                 if (transaction.SignerAccount == transaction.TargetAccount) return false;
