@@ -70,7 +70,7 @@ namespace MicroCoin.Transactions
                     {
                         bw.Write(AccountPrice);
                         bw.Write(SellerAccount);
-                        bw.Write((ushort)AccountKey.CurveType);
+                        bw.Write((ushort)NewAccountKey.CurveType);
                         if(NewAccountKey?.PublicKey.X != null && NewAccountKey.PublicKey.X.Length > 0 && NewAccountKey.PublicKey.Y.Length > 0)
                         {
                             bw.Write(NewAccountKey.PublicKey.X);

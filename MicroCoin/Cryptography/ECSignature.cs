@@ -63,15 +63,6 @@ namespace MicroCoin.Cryptography
                 br.Read(S, offset, len);
             }
         }
-
-        public ECSignature(Hash sign)
-        {
-            SigCompat = new byte[0];
-            byte[] data = sign;
-            R = data.Take(32).ToArray();
-            S = data.Skip(32).Take(32).ToArray();
-        }
-
         public byte[] Signature
         {
             get

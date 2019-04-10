@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
+using System.Diagnostics;
 
 namespace MicroCoin.CheckPoints
 {
@@ -73,6 +74,10 @@ namespace MicroCoin.CheckPoints
                     dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
                     if (validator != null)                        
                     {                        
+                        if(item.SignerAccount == 5503)
+                        {
+                            Debug.WriteLine("OK");
+                        }
                         if (!validator.IsValid((dynamic)item))
                         {
                             validator.IsValid((dynamic)item);

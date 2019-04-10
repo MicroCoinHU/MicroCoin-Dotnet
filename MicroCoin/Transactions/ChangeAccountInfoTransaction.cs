@@ -29,7 +29,6 @@ namespace MicroCoin.Transactions
 {
     public sealed class ChangeAccountInfoTransaction : Transaction
     {
-
         public enum AccountInfoChangeType : byte { PublicKey = 1, AccountName = 2, AccountType = 3 }
         public byte ChangeType { get; set; }
         public ECKeyPair NewAccountKey { get; set; } = new ECKeyPair();
@@ -114,15 +113,15 @@ namespace MicroCoin.Transactions
             var target = checkPointService.GetAccount(this.TargetAccount);
             signer.Balance -= Fee;
             signer.NumberOfOperations++;
-            if (ChangeType == (byte)AccountInfoChangeType.AccountName)
+            if ((ChangeType & (byte)AccountInfoChangeType.AccountName) > 0)
             {
                 target.Name = NewName;
             }
-            else if (ChangeType == (byte)AccountInfoChangeType.AccountType)
+            if ((ChangeType & (byte)AccountInfoChangeType.AccountType) > 0)
             {
                 target.AccountType = NewType;
             }
-            else if (ChangeType == (byte)AccountInfoChangeType.PublicKey)
+            if ((ChangeType & (byte)AccountInfoChangeType.PublicKey) > 0)
             {
                 target.AccountInfo.AccountKey = NewAccountKey;
             }
