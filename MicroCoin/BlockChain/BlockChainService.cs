@@ -1,4 +1,22 @@
-﻿using Microsoft.Extensions.Logging;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// BlockChainService.cs - Copyright (c) 2019 %UserDisplayName%
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
 using System.Collections.Generic;
@@ -55,34 +73,38 @@ namespace MicroCoin.BlockChain
             }
         }
 
+        protected void ProcessBlocks(IEnumerable<Block> blocks)
+        {
+            uint badBlockNumber = blocks.Max(p => p.Id) + 1;
+            object blockLock = new object();
+            Parallel.ForEach(blocks, (block, state) => {
+                if (!block.Header.IsValid())
+                {
+                    lock (blockLock)
+                    {
+                        if (badBlockNumber > block.Id)
+                        {
+                            badBlockNumber = block.Id;
+                        }
+                        state.Stop();
+                    }
+                }
+            });
+            foreach (var block in blocks)
+            {
+                blockCache.Add(block);
+                eventAggregator.GetEvent<BlocksAdded>().Publish(block);
+            }
+        }
+
         public void AddBlocks(IEnumerable<Block> blocks)
         {
             try
             {
-                uint badBlockNumber = blocks.Max(p => p.Id) + 1;
-                object blockLock = new object();
-                Parallel.ForEach(blocks, (block, state) => {
-                    if (!block.Header.IsValid())
-                    {
-                        lock (blockLock)
-                        {
-                            if (badBlockNumber > block.Id)
-                            {
-                                badBlockNumber = block.Id;
-                            }
-                            state.Stop();
-                        }
-                    }
-                });
-                foreach (var block in blocks)
-                {
-                    blockCache.Add(block);
-                    eventAggregator.GetEvent<BlocksAdded>().Publish(block);
-                }
+                ProcessBlocks(blocks);
             }
             finally
             {
-                logger.LogDebug("Saving blocks");
                 blockChainStorage.AddBlocks(blockCache);
                 blockCache.Clear();
             }
@@ -90,7 +112,16 @@ namespace MicroCoin.BlockChain
 
         public async Task AddBlocksAsync(IEnumerable<Block> blocks)
         {
-            await blockChainStorage.AddBlocksAsync(blocks);
+            try
+            {
+                ProcessBlocks(blocks);
+            }
+            finally
+            {
+                logger.LogInformation("Saving blocks");
+                await blockChainStorage.AddBlocksAsync(blocks);
+                blockCache.Clear();
+            }            
         }
 
         public void Dispose()

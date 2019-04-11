@@ -1,4 +1,22 @@
-﻿using MicroCoin.BlockChain;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// CheckPointService.cs - Copyright (c) 2019 %UserDisplayName%
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.Common;
 using MicroCoin.Transactions;
@@ -130,7 +148,7 @@ namespace MicroCoin.CheckPoints
                     }
                 }
                 st.Stop();
-                if (block.Transactions.Count >= 5)
+                if (block.Transactions.Count >= 10)
                 {
                     double speed = 0;
                     if (st.ElapsedMilliseconds > 0)
@@ -153,8 +171,10 @@ namespace MicroCoin.CheckPoints
             var start = (blockChain.BlockHeight / 100) * 100;
             for (uint i = (uint)start; i <= blockChain.BlockHeight; i++)
             {
-                var block = blockChain.GetBlock(i);
+                var block = blockChain.GetBlock(i);                
                 if (block == null) return;
+                if (block.Transactions != null)
+                    Debug.WriteLine("OK");
                 ApplyBlock(block);
             }
         }

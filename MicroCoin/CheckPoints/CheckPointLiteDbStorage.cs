@@ -1,4 +1,22 @@
-﻿using LiteDB;
+﻿//-----------------------------------------------------------------------
+// This file is part of MicroCoin - The first hungarian cryptocurrency
+// Copyright (c) 2019 Peter Nemeth
+// CheckPointLiteDbStorage.cs - Copyright (c) 2019 %UserDisplayName%
+//-----------------------------------------------------------------------
+// MicroCoin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MicroCoin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
+// GNU General Public License for more details.
+//-----------------------------------------------------------------------
+// You should have received a copy of the GNU General Public License
+// along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
+//-----------------------------------------------------------------------
+using LiteDB;
 using MicroCoin.Chain;
 using MicroCoin.Types;
 using System;
@@ -10,20 +28,22 @@ namespace MicroCoin.CheckPoints
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
         private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");
+        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false;");
 
         public CheckPointLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
-
             mapper.Entity<CheckPointBlock>()
-                .Field(p => p.Accounts, "a")
                 .Field(p => p.AccumulatedWork, "b")
                 .Field(p => p.BlockHash, "c")
                 .Field(p => p.Header, "d")
-                .DbRef(p => p.Accounts, "Account")
-                .DbRef(p => p.Header, "BlockHeader");
+                //.Field(p => p.Accounts, "a")
+                //.DbRef(p => p.Accounts, "a")
+                .Ignore(p=>p.Accounts)
+                .DbRef(p => p.Header, "bh");
 
             mapper.Entity<Account>()
+                .Id(p => p.AccountNumber)
                 .Field(p => p.AccountInfo, "a")
                 .Field(p => p.AccountNumber, "b")
                 .Field(p => p.AccountType, "c")
@@ -50,13 +70,13 @@ namespace MicroCoin.CheckPoints
 
         public void AddBlock(CheckPointBlock block)
         {
-            db.GetCollection<Account>().Upsert(block.Accounts);
+            accountdb.GetCollection<Account>("a").Upsert(block.Accounts);
             db.GetCollection<CheckPointBlock>().Upsert(block);
         }
 
         public void AddBlocks(IEnumerable<CheckPointBlock> blocks)
         {
-            db.GetCollection<Account>().Upsert(blocks.SelectMany(p => p.Accounts));
+            accountdb.GetCollection<Account>("a").Upsert(blocks.SelectMany(p => p.Accounts));
             db.GetCollection<CheckPointBlock>().Upsert(blocks);
         }
 
@@ -67,7 +87,7 @@ namespace MicroCoin.CheckPoints
 
         public Account GetAccount(AccountNumber accountNumber)
         {
-            return db.GetCollection<Account>().FindById((int)accountNumber);
+            return accountdb.GetCollection<Account>("a").FindById((int)accountNumber);
             /*
             var acc = 
             return acc; */
@@ -79,7 +99,15 @@ namespace MicroCoin.CheckPoints
 
         public CheckPointBlock GetBlock(int blockNumber)
         {
-            return db.GetCollection<CheckPointBlock>().Include(p => p.Accounts).Include(p=>p.Header).FindById(blockNumber);
+            var cb = db.GetCollection<CheckPointBlock>().Include(p=>p.Header).FindById(blockNumber);
+            var minAccount = cb.Id*5;
+            var maxAccount = cb.Id*5+4;
+            
+            for(var i = minAccount; i <= maxAccount; i++)
+            {
+                cb.Accounts.Add(accountdb.GetCollection<Account>("a").FindById((int)i));
+            }
+            return cb;
         }
     }
 }

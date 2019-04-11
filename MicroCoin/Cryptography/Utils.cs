@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Utils.cs - Copyright (c) 2019 Németh Péter
+// Utils.cs - Copyright (c) 2019 %UserDisplayName%
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -76,31 +76,45 @@ namespace MicroCoin.Cryptography
                 return new ECSignature();
             }
         }
-
-        
-
+      
         public static bool ValidateSignature(Hash data, ECSignature signature, ECKeyPair keyPair)
         {
-            if (keyPair.CurveType == ECCurveType.Secp256K1)
+            if (keyPair.CurveType != ECCurveType.Sect283K1)
             {
                 try
-                {
+                {                   
                     using (var ecdsa = ECDsa.Create(keyPair))
-                    {
-                        return ecdsa.VerifyHash(data, signature.Signature);
+                    {                        
+                        while (signature.S.Length * 8 < ecdsa.KeySize)
+                        {
+                            var list = signature.S.ToList();
+                            list.Insert(0, 0);
+                            signature.S = list.ToArray();
+                        }
+                        while (signature.R.Length * 8 < ecdsa.KeySize)
+                        {
+                            var list = signature.R.ToList();
+                            list.Insert(0, 0);
+                            signature.R = list.ToArray();
+                        }
+                        var ok = ecdsa.VerifyHash(data, signature.Signature);
+                        if (!ok)
+                        {
+                            Console.WriteLine("NOT");
+                        }
+                        return ok;
                     }
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
-                    throw;
                 }
             }
             var derSignature = new DerSequence(
                 new DerInteger(new BigInteger(1, signature.R)),
                 new DerInteger(new BigInteger(1, signature.S)))
                 .GetDerEncoded();            
-            X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());
+            X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());           
             ECDomainParameters domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
             var publicKey = curve.Curve.CreatePoint(new BigInteger(+1, keyPair.PublicKey.X), new BigInteger(+1, keyPair.PublicKey.Y));
             ECPublicKeyParameters publicKeyParameters = new ECPublicKeyParameters(publicKey, domain);
@@ -108,7 +122,6 @@ namespace MicroCoin.Cryptography
             signer.Init(false, publicKeyParameters);
             signer.BlockUpdate(data, 0, data.Length);
             return signer.VerifySignature(derSignature);
-            //return true;
         }
 
         public static byte[] GenerateSharedKey(ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)

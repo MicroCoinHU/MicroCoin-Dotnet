@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// BlockChainLiteDbStorage.cs - Copyright (c) 2019 Németh Péter
+// BlockChainLiteDbStorage.cs - Copyright (c) 2019 %UserDisplayName%
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,24 +26,28 @@ namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");        
+        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false;");        
 
         public BlockChainLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
             mapper.Entity<Block>()
-                .Field(p => p.Transactions, "a")
+                //.Field(p => p.Transactions, "a")
+                .Ignore(p => p.Transactions)
                 .Field(p => p.Header, "b")
-                .DbRef(p => p.Header, "BlockHeader")
-                .DbRef(p => p.Transactions, "ITransaction");
-            mapper.Entity<ITransaction>()
+                .DbRef(p => p.Header, "bh");
+                //.DbRef(p => p.Transactions, "tr");
+            mapper.Entity<ITransaction>()                
+                .Id(p=>p._id)               
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.TransactionType, "d")
                 .Field(p => p.Fee, "e")
                 .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g");
+                .Field(p => p.Signature, "g")
+                .Field(p => p.Block, "h");
             mapper.Entity<Transaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -51,7 +55,8 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "d")
                 .Field(p => p.Fee, "e")
                 .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g");
+                .Field(p => p.Signature, "g")
+                .Field(p => p.Block, "h");
             mapper.Entity<ChangeKeyTransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -62,7 +67,8 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.Signature, "g")
                 .Field(p => p.NumberOfOperations, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.Amount, "j");
+                .Field(p => p.Amount, "j")
+                .Field(p => p.Block, "k");
             mapper.Entity<ListAccountTransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -76,7 +82,8 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.AccountToPay, "j")
                 .Field(p => p.LockedUntilBlock, "k")
                 .Field(p => p.NewPublicKey, "l")
-                .Field(p => p.NumberOfOperations, "m");
+                .Field(p => p.NumberOfOperations, "m")
+                .Field(p => p.Block, "n");
             mapper.Entity<TransferTransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -90,39 +97,47 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "j")
                 .Field(p => p.Fee, "k")
                 .Field(p => p.Payload, "l")
-                .Field(p => p.Signature, "m");
+                .Field(p => p.Signature, "m")
+                .Field(p => p.Block, "n");
+            //mapper.Entity<Block>().Field(p => p.Header, "h");
+            //.Field(p => p.Transactions, "t");
+            trdb.GetCollection<ITransaction>("tr").EnsureIndex(p => p.Block);
         }
 
         public int Count
         {
             get
             {
-                return db.GetCollection<Block>().Count();
+                return db.GetCollection<BlockHeader>("bh").Count();
             }
         }
 
-        public int BlockHeight => db.GetCollection<Block>().Max(p => p.Id).AsInt32;
+        public int BlockHeight => db.GetCollection<BlockHeader>("bh").Max(p => p.Id).AsInt32;
 
         public void AddBlock(Block block)
         {
-            db.GetCollection<BlockHeader>().Upsert(block.Header);
-            db.GetCollection<ITransaction>().Upsert(block.Transactions);
-            db.GetCollection<Block>().Upsert(block);
+            db.GetCollection<BlockHeader>("bh").Upsert(block.Header);
+            trdb.GetCollection<ITransaction>("tr").Upsert(block.Transactions);
         }
 
         public void AddBlocks(IEnumerable<Block> blocks)
         {
-            db.GetCollection<BlockHeader>().Upsert(blocks.Select(p => p.Header));
-            db.GetCollection<ITransaction>().Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
-            db.GetCollection<Block>().Upsert(blocks);
+            db.GetCollection<BlockHeader>("bh").Upsert(blocks.Select(p => p.Header));
+            trdb.GetCollection<ITransaction>("tr").Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
         }
 
         public async Task AddBlocksAsync(IEnumerable<Block> blocks)
         {
-            await Task.Run(() =>
+            
+            var t1 = Task.Factory.StartNew(() =>
             {
-                db.GetCollection<Block>().Upsert(blocks);
+                db.GetCollection<BlockHeader>("bh").Upsert(blocks.Select(p => p.Header));
             });
+            var t2 = Task.Factory.StartNew(() =>
+            {
+                trdb.GetCollection<ITransaction>("tr").Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
+            });
+            await Task.WhenAll(t1, t2, t2);
         }
 
         public void Dispose()
@@ -132,10 +147,17 @@ namespace MicroCoin.BlockChain
 
         public Block GetBlock(uint blockNumber)
         {
-            return db.GetCollection<Block>()
-                .Include(p => p.Header)
-                .Include(p => p.Transactions)
-                .FindById((int)blockNumber);
+            var bt = Task<BlockHeader>.Factory.StartNew(() => db.GetCollection<BlockHeader>("bh").FindById((int)blockNumber));
+            var tt = Task<IList<ITransaction>>.Factory.StartNew(() => trdb.GetCollection<ITransaction>("tr").Find(p => p.Block == blockNumber).ToList());
+            Task.WaitAll(bt, tt);
+            var blockHeader = bt.Result;
+            if (blockHeader == null) return null;
+            var block = new Block
+            {
+                Header = blockHeader,
+                Transactions = tt.Result
+            };
+            return block;
         }
     }
 }

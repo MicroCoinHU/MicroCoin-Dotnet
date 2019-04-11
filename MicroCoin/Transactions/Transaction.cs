@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Transaction.cs - Copyright (c) 2019 Németh Péter
+// Transaction.cs - Copyright (c) 2019 %UserDisplayName%
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,7 +28,9 @@ namespace MicroCoin.Transactions
 {
     public abstract class Transaction : ITransaction
     {
-        public uint Id { get; set; }
+        public long _id { get; set; }
+        public uint Block { get; set; }
+
         private ByteString _payload;
         public AccountNumber SignerAccount { get; set; }
         public uint NumberOfOperations { get; set; }

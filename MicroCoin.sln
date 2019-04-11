@@ -5,16 +5,32 @@ VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin", "MicroCoin\MicroCoin.csproj", "{92162859-5D93-4627-A3D2-532D984B9E6C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDB", "LiteDB\LiteDB\LiteDB.csproj", "{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{92162859-5D93-4627-A3D2-532D984B9E6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{92162859-5D93-4627-A3D2-532D984B9E6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Debug|x64.ActiveCfg = Debug|x64
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Debug|x64.Build.0 = Debug|x64
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|Any CPU.ActiveCfg = Release - x64|Any CPU
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|Any CPU.Build.0 = Release - x64|Any CPU
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|x64.ActiveCfg = Release|x64
+		{92162859-5D93-4627-A3D2-532D984B9E6C}.Release|x64.Build.0 = Release|x64
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Debug|x64.Build.0 = Debug|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Release|x64.ActiveCfg = Release|Any CPU
+		{F1CFD099-7C67-439B-A6EC-8638D9A5CD55}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

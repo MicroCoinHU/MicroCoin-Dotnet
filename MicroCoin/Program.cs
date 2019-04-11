@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Program.cs - Copyright (c) 2019 Németh Péter
+// Program.cs - Copyright (c) 2019 %UserDisplayName%
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ using NLog.Extensions.Logging;
 using Microsoft.Extensions.Logging;
 using LogLevel = NLog.LogLevel;
 using MicroCoin.Transactions;
+using System.Diagnostics;
 
 namespace MicroCoin
 {
@@ -196,24 +197,10 @@ namespace MicroCoin
                             break;
                         }
                         var blocks = response.Payload<BlockResponse>().Blocks;
-                        Console.WriteLine("Checking {0} blocks", blocks.Count);
-                        Parallel.ForEach(blocks, (b) =>
-                        {
-                            if (!b.Header.IsValid())
-                            {
-                                throw new Exception(string.Format("Invalid block {0}", b.Header.BlockNumber));
-                            }
-                            if (b.Transactions != null)
-                            {
-                                Parallel.ForEach(b.Transactions, (t) =>
-                                {
-                                    if (!t.IsValid())
-                                        throw new Exception(string.Format("Invalid transaction {0}", t.ToString()));
-                                });
-                            }
-                        });
-                        bc.AddBlocks(blocks);
-                        Console.WriteLine("Added {0} blocks. New block height {1}", blocks.Count, bc.BlockHeight);
+                        var st = Stopwatch.StartNew();
+                        await bc.AddBlocksAsync(blocks);                        
+                        st.Stop();
+                        Console.WriteLine("Added {0} blocks with {2} transactions in {3}. New block height {1}", blocks.Count, bc.BlockHeight, blocks.Sum(p=>p.Transactions?.Count), st.Elapsed);
                     } while (remoteBlock > bc.BlockHeight);
                 }
             }

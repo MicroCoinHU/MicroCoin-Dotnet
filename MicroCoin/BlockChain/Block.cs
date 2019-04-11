@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Block.cs - Copyright (c) 2019 Németh Péter
+// Block.cs - Copyright (c) 2019 %UserDisplayName%
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ namespace MicroCoin.BlockChain
                     ITransaction t = TransactionFactory.FromType(transactionType);
                     t.TransactionType = transactionType;
                     t.LoadFromStream(stream);
+                    t.Block = Header.BlockNumber;
                     Transactions.Add(t);
                 }
             }
