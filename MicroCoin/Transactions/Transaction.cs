@@ -28,6 +28,7 @@ namespace MicroCoin.Transactions
 {
     public abstract class Transaction : ITransaction
     {
+        public uint Id { get; set; }
         private ByteString _payload;
         public AccountNumber SignerAccount { get; set; }
         public uint NumberOfOperations { get; set; }

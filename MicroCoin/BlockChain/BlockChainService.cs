@@ -82,6 +82,7 @@ namespace MicroCoin.BlockChain
             }
             finally
             {
+                logger.LogDebug("Saving blocks");
                 blockChainStorage.AddBlocks(blockCache);
                 blockCache.Clear();
             }

@@ -18,20 +18,24 @@
 //-----------------------------------------------------------------------
 using LiteDB;
 using MicroCoin.Transactions;
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("blocks.db");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");
 
         public BlockChainLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
-            mapper.Entity<Block>().Field(p => p.Transactions, "a").Field(p => p.Header, "b");
+            mapper.Entity<Block>()
+                .Field(p => p.Transactions, "a")
+                .Field(p => p.Header, "b")
+                .DbRef(p => p.Header, "BlockHeader")
+                .DbRef(p => p.Transactions, "ITransaction");
             mapper.Entity<ITransaction>()
                 .Field(p => p.AccountKey, "a")
                 .Field(p => p.SignerAccount, "b")
@@ -101,11 +105,15 @@ namespace MicroCoin.BlockChain
 
         public void AddBlock(Block block)
         {
+            db.GetCollection<BlockHeader>().Upsert(block.Header);
+            db.GetCollection<ITransaction>().Upsert(block.Transactions);
             db.GetCollection<Block>().Upsert(block);
         }
 
         public void AddBlocks(IEnumerable<Block> blocks)
         {
+            db.GetCollection<BlockHeader>().Upsert(blocks.Select(p => p.Header));
+            db.GetCollection<ITransaction>().Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
             db.GetCollection<Block>().Upsert(blocks);
         }
 
@@ -124,7 +132,10 @@ namespace MicroCoin.BlockChain
 
         public Block GetBlock(uint blockNumber)
         {
-            return db.GetCollection<Block>().FindById((int)blockNumber);
+            return db.GetCollection<Block>()
+                .Include(p => p.Header)
+                .Include(p => p.Transactions)
+                .FindById((int)blockNumber);
         }
     }
 }

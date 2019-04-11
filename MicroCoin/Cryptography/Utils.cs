@@ -77,20 +77,38 @@ namespace MicroCoin.Cryptography
             }
         }
 
+        
+
         public static bool ValidateSignature(Hash data, ECSignature signature, ECKeyPair keyPair)
         {
+            if (keyPair.CurveType == ECCurveType.Secp256K1)
+            {
+                try
+                {
+                    using (var ecdsa = ECDsa.Create(keyPair))
+                    {
+                        return ecdsa.VerifyHash(data, signature.Signature);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    throw;
+                }
+            }
             var derSignature = new DerSequence(
                 new DerInteger(new BigInteger(1, signature.R)),
                 new DerInteger(new BigInteger(1, signature.S)))
-                .GetDerEncoded();
-            ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
+                .GetDerEncoded();            
             X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());
             ECDomainParameters domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
             var publicKey = curve.Curve.CreatePoint(new BigInteger(+1, keyPair.PublicKey.X), new BigInteger(+1, keyPair.PublicKey.Y));
             ECPublicKeyParameters publicKeyParameters = new ECPublicKeyParameters(publicKey, domain);
+            ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
             signer.Init(false, publicKeyParameters);
             signer.BlockUpdate(data, 0, data.Length);
             return signer.VerifySignature(derSignature);
+            //return true;
         }
 
         public static byte[] GenerateSharedKey(ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)

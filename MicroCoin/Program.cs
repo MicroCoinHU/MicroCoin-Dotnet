@@ -157,12 +157,12 @@ namespace MicroCoin
                 if (node.NetClient != null && node.Connected)
                     node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
             }, ThreadOption.BackgroundThread, false);
-
+            /*
             ServiceLocator.EventAggregator.GetEvent<BlocksAdded>().Subscribe(t =>
             {
                 Console.WriteLine("Added block#{0} to blockchain with {1} transactions", t.Id, t.Transactions == null ? 0 : t.Transactions.Count);
             }, ThreadOption.PublisherThread, false);
-
+            */
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {
                 throw new Exception("NO FIX SEEDS FOUND");

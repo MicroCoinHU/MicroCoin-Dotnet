@@ -9,7 +9,7 @@ namespace MicroCoin.CheckPoints
 {
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
-        private readonly LiteDatabase db = new LiteDatabase("checkpoints.db");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");
 
         public CheckPointLiteDbStorage()
         {
@@ -21,7 +21,7 @@ namespace MicroCoin.CheckPoints
                 .Field(p => p.BlockHash, "c")
                 .Field(p => p.Header, "d")
                 .DbRef(p => p.Accounts, "Account")
-                ;
+                .DbRef(p => p.Header, "BlockHeader");
 
             mapper.Entity<Account>()
                 .Field(p => p.AccountInfo, "a")
@@ -79,7 +79,7 @@ namespace MicroCoin.CheckPoints
 
         public CheckPointBlock GetBlock(int blockNumber)
         {
-            return db.GetCollection<CheckPointBlock>().Include(p => p.Accounts).FindById(blockNumber);
+            return db.GetCollection<CheckPointBlock>().Include(p => p.Accounts).Include(p=>p.Header).FindById(blockNumber);
         }
     }
 }

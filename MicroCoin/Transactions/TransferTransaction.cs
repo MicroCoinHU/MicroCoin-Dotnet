@@ -217,7 +217,7 @@ namespace MicroCoin.Transactions
         {
             if (transaction.Amount < 0) return false;
             if (transaction.Fee < 0) return false;
-            var senderAccount = checkPointService.GetAccount(transaction.SignerAccount);
+            var senderAccount = checkPointService.GetAccount(transaction.SignerAccount, true);
             if(!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
             {
                 return false;
@@ -230,7 +230,7 @@ namespace MicroCoin.Transactions
                 if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
                 if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
                 if (senderAccount.NumberOfOperations + 1 != transaction.NumberOfOperations) return false;
-                var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
+                var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
                 if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
             }
             else if (transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)

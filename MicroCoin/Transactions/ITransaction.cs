@@ -40,6 +40,7 @@ namespace MicroCoin.Transactions
 
     public interface ITransaction
     {
+        uint Id { get; set; }
         Currency Fee { get; set; }
         ECSignature Signature { get; set; }
         AccountNumber SignerAccount { get; set; }

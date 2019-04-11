@@ -26,6 +26,7 @@ namespace MicroCoin.BlockChain
 {
     public class BlockHeader
     {
+        public uint Id { get => BlockNumber; set => BlockNumber = value; }
         public byte BlockSignature { get; set; } = 3;
         public ushort ProtocolVersion { get; set; }
         public ushort AvailableProtocol { get; set; }

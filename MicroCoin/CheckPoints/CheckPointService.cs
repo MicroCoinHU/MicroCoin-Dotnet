@@ -29,9 +29,23 @@ namespace MicroCoin.CheckPoints
             eventAggregator.GetEvent<BlocksAdded>().Subscribe(ApplyBlock, ThreadOption.PublisherThread);
         }
 
-        public Account GetAccount(AccountNumber accountNumber)
+        public Account GetAccount(AccountNumber accountNumber, bool @readonly = false)
         {
-            var block = GetBlockForAccount(accountNumber);
+            CheckPointBlock block;
+            if (@readonly)
+            {
+                int blockNumber = accountNumber / 5;
+                block = modifiedBlocks.FirstOrDefault(p => p.Id == blockNumber);
+                if (block != null)
+                {
+                    return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
+                }
+                else
+                {
+                    return checkPointStorage.GetAccount(accountNumber);
+                }
+            }
+            block = GetBlockForAccount(accountNumber);
             return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
         }
 
@@ -44,6 +58,8 @@ namespace MicroCoin.CheckPoints
             modifiedBlocks.Add(block);
             return block;
         }
+
+        private Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
 
         public void ApplyBlock(Block block)
         {
@@ -70,9 +86,19 @@ namespace MicroCoin.CheckPoints
             }
             if (block.Transactions != null)
             {
+                var st = Stopwatch.StartNew();
                 foreach (ITransaction item in block.Transactions)
                 {
-                    var validatorType = typeof(ITransactionValidator<>).MakeGenericType(item.GetType());
+                    Type validatorType = null;
+                    if (validators.ContainsKey(item.GetType()))
+                    {
+                        validatorType = validators[item.GetType()];
+                    }
+                    else
+                    {
+                        validatorType = typeof(ITransactionValidator<>).MakeGenericType(item.GetType());
+                        validators.Add(item.GetType(), validatorType);
+                    }
                     dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
                     if (validator != null)                        
                     {                        
@@ -87,13 +113,13 @@ namespace MicroCoin.CheckPoints
                             foreach(var account in modified)
                             {
                                 account.UpdatedBlock = block.Id;
-                                var accountBlock = GetBlockForAccount(account.AccountNumber);
-                                if(!modifiedBlocks.Any(p=>p.Id == accountBlock.Id))
+                                var accountBlock = modifiedBlocks.FirstOrDefault(p => p.Id == account.AccountNumber / 5);
+                                if (accountBlock == null)
                                 {
+                                    accountBlock = GetBlockForAccount(account.AccountNumber);
                                     modifiedBlocks.Add(accountBlock);
                                 }
                                 accountBlock.Accounts[account.AccountNumber % 5] = account;
-                                //accountBlock.Accounts[account.AccountNumber % 5].AccountInfo = account.AccountInfo;
                             }
                         }
                     }
@@ -102,6 +128,16 @@ namespace MicroCoin.CheckPoints
                         GetAccount(item.SignerAccount).NumberOfOperations += 1;
                         logger.LogWarning("No validator found for transaction type {0}", item.GetType());
                     }
+                }
+                st.Stop();
+                if (block.Transactions.Count >= 5)
+                {
+                    double speed = 0;
+                    if (st.ElapsedMilliseconds > 0)
+                    {
+                        speed = block.Transactions.Count / (st.Elapsed.TotalSeconds);
+                    }
+                    logger.LogInformation("Processed {0} transactions in {1}, Speed {2} T/s", block.Transactions.Count, st.Elapsed.TotalSeconds, speed);
                 }
             }
             modifiedBlocks.Add(checkPointBlock);

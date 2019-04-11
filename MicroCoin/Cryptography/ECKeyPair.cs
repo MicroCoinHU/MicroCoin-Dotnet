@@ -22,6 +22,7 @@ using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using System;
 using System.IO;
@@ -73,17 +74,26 @@ namespace MicroCoin.Cryptography
             get
             {
                 if (_eCParameters != null) return _eCParameters.Value;
-                ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString().ToLower());
+                ECCurve curve;
+                if (CurveType == ECCurveType.Secp521R1)
+                {
+                    var oid = "1.3.132.0.35";
+                    curve = ECCurve.CreateFromValue(oid);
+
+                }
+                else
+                {
+                   curve = ECCurve.CreateFromFriendlyName(CurveType.ToString().ToLower());
+                }
                 ECParameters parameters = new ECParameters
                 {
+                    Curve = curve,
                     Q = PublicKey
                 };
                 if (D != null)
                 {
                     parameters.D = D;
                 }
-
-                parameters.Curve = curve;
                 parameters.Validate();
                 _eCParameters = parameters;
                 return _eCParameters.Value;
@@ -97,14 +107,14 @@ namespace MicroCoin.Cryptography
             {
                 CurveType = ECCurveType.Secp256K1
             };
-            var privKeyInt = new Org.BouncyCastle.Math.BigInteger(+1, (Hash)hex);
+            var privKeyInt = new BigInteger(+1, (Hash)hex);
             var parameters = SecNamedCurves.GetByName("secp256k1");
             var ecPoint = parameters.G.Multiply(privKeyInt);
-            keyPair.D = privKeyInt.ToByteArray();
+            keyPair.D = privKeyInt.ToByteArrayUnsigned();
             ECPoint PublicKey = new ECPoint
             {
-                X = ecPoint.Normalize().XCoord.ToBigInteger().ToByteArray(),
-                Y = ecPoint.Normalize().YCoord.ToBigInteger().ToByteArray()
+                X = ecPoint.Normalize().XCoord.ToBigInteger().ToByteArrayUnsigned(),
+                Y = ecPoint.Normalize().YCoord.ToBigInteger().ToByteArrayUnsigned()
             };
             keyPair.PublicKey = PublicKey;
             return keyPair;
@@ -200,9 +210,21 @@ namespace MicroCoin.Cryptography
 
                 CurveType = (ECCurveType)br.ReadUInt16();
                 ushort xLen = br.ReadUInt16();
-                var X = br.ReadBytes(xLen);
+                var X = new BigInteger(1, br.ReadBytes(xLen)).ToByteArrayUnsigned();
                 ushort yLen = br.ReadUInt16();
-                var Y = br.ReadBytes(yLen);
+                var Y = new BigInteger(1, br.ReadBytes(yLen)).ToByteArrayUnsigned();
+                /*if (X.Length < 32)
+                {
+                    var padded = X.ToList();
+                    padded.Insert(0, 0);
+                    X = padded.ToArray();
+                }
+                if (Y.Length < 32)
+                {
+                    var padded = Y.ToList();
+                    padded.Insert(0, 0);
+                    Y = padded.ToArray();
+                }*/
                 PublicKey = new ECPoint() { X = X, Y = Y };
                 if (readPrivateKey)
                 {
