@@ -17,6 +17,7 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using LiteDB;
+using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.Types;
 using System;
@@ -27,8 +28,8 @@ namespace MicroCoin.CheckPoints
 {
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");
-        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false;");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
+        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
 
         public CheckPointLiteDbStorage()
         {
@@ -36,11 +37,8 @@ namespace MicroCoin.CheckPoints
             mapper.Entity<CheckPointBlock>()
                 .Field(p => p.AccumulatedWork, "b")
                 .Field(p => p.BlockHash, "c")
-                .Field(p => p.Header, "d")
-                //.Field(p => p.Accounts, "a")
-                //.DbRef(p => p.Accounts, "a")
-                .Ignore(p=>p.Accounts)
-                .DbRef(p => p.Header, "bh");
+                .Ignore(p => p.Header)
+                .Ignore(p => p.Accounts);
 
             mapper.Entity<Account>()
                 .Id(p => p.AccountNumber)
@@ -66,6 +64,11 @@ namespace MicroCoin.CheckPoints
                 .Field(p => p.State, "f")
                 .Ignore(p => p.StateString)
                 .Ignore(p => p.VisiblePrice);
+        }
+
+        public void AddAccounts(IList<Account> modifiedAccounts)
+        {
+            accountdb.GetCollection<Account>("a").Upsert(modifiedAccounts);
         }
 
         public void AddBlock(CheckPointBlock block)
@@ -99,13 +102,13 @@ namespace MicroCoin.CheckPoints
 
         public CheckPointBlock GetBlock(int blockNumber)
         {
-            var cb = db.GetCollection<CheckPointBlock>().Include(p=>p.Header).FindById(blockNumber);
-            var minAccount = cb.Id*5;
-            var maxAccount = cb.Id*5+4;
-            
+            var cb = db.GetCollection<CheckPointBlock>().FindById(blockNumber);
+            cb.Header = db.GetCollection<BlockHeader>("bh").FindById(blockNumber);
+            var minAccount = blockNumber * 5;
+            var maxAccount = blockNumber * 5 + 4;
             for(var i = minAccount; i <= maxAccount; i++)
             {
-                cb.Accounts.Add(accountdb.GetCollection<Account>("a").FindById((int)i));
+                cb.Accounts.Add(accountdb.GetCollection<Account>("a").FindById(i));
             }
             return cb;
         }

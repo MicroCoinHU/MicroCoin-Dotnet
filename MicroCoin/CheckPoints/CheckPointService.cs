@@ -38,6 +38,7 @@ namespace MicroCoin.CheckPoints
         private readonly ILogger<CheckPointService> logger;
 
         private readonly IList<CheckPointBlock> modifiedBlocks = new List<CheckPointBlock>();
+        private readonly IList<Account> modifiedAccounts = new List<Account>();
 
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator, IBlockChain blockChain, ILogger<CheckPointService> logger)
         {
@@ -49,7 +50,13 @@ namespace MicroCoin.CheckPoints
 
         public Account GetAccount(AccountNumber accountNumber, bool @readonly = false)
         {
-            CheckPointBlock block;
+            var account = modifiedAccounts.FirstOrDefault(p=>p.AccountNumber == accountNumber);
+            if (account != null) return account;
+            var block = GetBlockForAccount(accountNumber);
+            account = block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
+            modifiedAccounts.Add(account);
+            return account;
+            /*CheckPointBlock block;
             if (@readonly)
             {
                 int blockNumber = accountNumber / 5;
@@ -65,6 +72,7 @@ namespace MicroCoin.CheckPoints
             }
             block = GetBlockForAccount(accountNumber);
             return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
+            */
         }
 
         protected CheckPointBlock GetBlockForAccount(AccountNumber accountNumber)
@@ -73,7 +81,7 @@ namespace MicroCoin.CheckPoints
             var block = modifiedBlocks.FirstOrDefault(p => p.Id == blockNumber);
             if (block != null) return block;
             block = checkPointStorage.GetBlock(blockNumber);
-            modifiedBlocks.Add(block);
+            //modifiedBlocks.Add(block);
             return block;
         }
 
@@ -131,13 +139,18 @@ namespace MicroCoin.CheckPoints
                             foreach(var account in modified)
                             {
                                 account.UpdatedBlock = block.Id;
-                                var accountBlock = modifiedBlocks.FirstOrDefault(p => p.Id == account.AccountNumber / 5);
+                                if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
+                                {
+                                    modifiedAccounts.Add(account);
+                                }
+                                
+                                /*var accountBlock = modifiedBlocks.FirstOrDefault(p => p.Id == account.AccountNumber / 5);
                                 if (accountBlock == null)
                                 {
                                     accountBlock = GetBlockForAccount(account.AccountNumber);
                                     modifiedBlocks.Add(accountBlock);
                                 }
-                                accountBlock.Accounts[account.AccountNumber % 5] = account;
+                                accountBlock.Accounts[account.AccountNumber % 5] = account;*/
                             }
                         }
                     }
@@ -162,7 +175,9 @@ namespace MicroCoin.CheckPoints
             if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
             {
                 checkPointStorage.AddBlocks(modifiedBlocks);
+                checkPointStorage.AddAccounts(modifiedAccounts);
                 modifiedBlocks.Clear();
+                modifiedAccounts.Clear();
             }
         }
 

@@ -182,8 +182,8 @@ namespace MicroCoin.Cryptography
             };
             k.PublicKey = new ECPoint
             {
-                X = pubParams.Q.Normalize().XCoord.ToBigInteger().ToByteArray(),
-                Y = pubParams.Q.Normalize().YCoord.ToBigInteger().ToByteArray()
+                X = pubParams.Q.Normalize().XCoord.ToBigInteger().ToByteArrayUnsigned(),
+                Y = pubParams.Q.Normalize().YCoord.ToBigInteger().ToByteArrayUnsigned()
             };
             return k;
         }

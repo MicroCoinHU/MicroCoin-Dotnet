@@ -26,8 +26,8 @@ namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false;");        
-        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false;");        
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");        
+        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false; Async=true");        
 
         public BlockChainLiteDbStorage()
         {
@@ -37,28 +37,28 @@ namespace MicroCoin.BlockChain
                 .Ignore(p => p.Transactions)
                 .Field(p => p.Header, "b")
                 .DbRef(p => p.Header, "bh");
-                //.DbRef(p => p.Transactions, "tr");
-            mapper.Entity<ITransaction>()                
-                .Id(p=>p._id)               
-                .Field(p => p.AccountKey, "a")
+            //.DbRef(p => p.Transactions, "tr");
+            mapper.Entity<ITransaction>()
+                .Id(p => p._id)
+                .Ignore(p => p.AccountKey)
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.TransactionType, "d")
                 .Field(p => p.Fee, "e")
                 .Field(p => p.Payload, "f")
                 .Field(p => p.Signature, "g")
-                .Field(p => p.Block, "h");
+                .Field(p => p.Block, "bl");
             mapper.Entity<Transaction>()
-                .Field(p => p.AccountKey, "a")
+                .Ignore(p => p.AccountKey)
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.TransactionType, "d")
                 .Field(p => p.Fee, "e")
                 .Field(p => p.Payload, "f")
                 .Field(p => p.Signature, "g")
-                .Field(p => p.Block, "h");
+                ;
             mapper.Entity<ChangeKeyTransaction>()
-                .Field(p => p.AccountKey, "a")
+                .Ignore(p => p.AccountKey)
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.TransactionType, "d")
@@ -67,10 +67,10 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.Signature, "g")
                 .Field(p => p.NumberOfOperations, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.Amount, "j")
-                .Field(p => p.Block, "k");
+                .Field(p => p.Amount, "j");
+                
             mapper.Entity<ListAccountTransaction>()
-                .Field(p => p.AccountKey, "a")
+                .Ignore(p => p.AccountKey)
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.TransactionType, "d")
@@ -83,9 +83,9 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.LockedUntilBlock, "k")
                 .Field(p => p.NewPublicKey, "l")
                 .Field(p => p.NumberOfOperations, "m")
-                .Field(p => p.Block, "n");
+                ;
             mapper.Entity<TransferTransaction>()
-                .Field(p => p.AccountKey, "a")
+                .Ignore(p => p.AccountKey)
                 .Field(p => p.SignerAccount, "b")
                 .Field(p => p.TargetAccount, "c")
                 .Field(p => p.SellerAccount, "d")
@@ -98,9 +98,7 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.Fee, "k")
                 .Field(p => p.Payload, "l")
                 .Field(p => p.Signature, "m")
-                .Field(p => p.Block, "n");
-            //mapper.Entity<Block>().Field(p => p.Header, "h");
-            //.Field(p => p.Transactions, "t");
+                ;
             trdb.GetCollection<ITransaction>("tr").EnsureIndex(p => p.Block);
         }
 
@@ -137,7 +135,7 @@ namespace MicroCoin.BlockChain
             {
                 trdb.GetCollection<ITransaction>("tr").Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
             });
-            await Task.WhenAll(t1, t2, t2);
+            await Task.WhenAll(t1, t2);            
         }
 
         public void Dispose()

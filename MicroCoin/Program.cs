@@ -104,7 +104,7 @@ namespace MicroCoin
             ServiceLocator.ServiceProvider = new ServiceCollection()
                 .AddSingleton<IEventAggregator, EventAggregator>()
                 .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>()
-                .AddSingleton<IBlockChain, BlockChain.BlockChainService>()
+                .AddSingleton<IBlockChain, BlockChainService>()
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
                 .AddSingleton<ICheckPointService, CheckPointService>()
                 .AddSingleton<IPeerManager, PeerManager>()
