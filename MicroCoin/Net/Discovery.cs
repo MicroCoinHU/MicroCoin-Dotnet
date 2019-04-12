@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Discovery.cs - Copyright (c) 2019 %UserDisplayName%
+// Discovery.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -143,6 +143,7 @@ namespace MicroCoin.Net
                             peerManager.Remove(elem);
                         }
                     }
+                    logger.LogInformation("We have total {0} peers. {1} alive and {2} died.", peerManager.GetNodes().Count(), peerManager.GetNodes().Count(p=>p.Connected), peerManager.GetNodes().Count(p => !p.Connected));
                     Thread.Sleep(1000);
                 }
             }

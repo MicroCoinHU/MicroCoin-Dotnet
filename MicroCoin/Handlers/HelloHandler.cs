@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// HelloHandler.cs - Copyright (c) 2019 %UserDisplayName%
+// HelloHandler.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ namespace MicroCoin.Handlers
                 NodeServers = new NodeServerList(),
                 ServerPort = Params.ServerPort,
                 Timestamp = DateTime.UtcNow,
-                Version = "2.0.0wN",
+                Version = Params.ProgramVersion,
                 Block = blockChain.GetBlock((uint)blockChain.BlockHeight),
                 WorkSum = 0
             };
@@ -87,7 +87,6 @@ namespace MicroCoin.Handlers
 
         public void Handle(NetworkPacket packet)
         {
-            Console.WriteLine("Handle hello {0} from {1}", packet.Header.RequestType, packet.Node.EndPoint);
             switch (packet.Header.RequestType)
             {
                 case RequestType.Request: HandleRequest(packet); break;

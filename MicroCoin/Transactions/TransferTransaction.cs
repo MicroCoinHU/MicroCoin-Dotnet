@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// TransferTransaction.cs - Copyright (c) 2019 %UserDisplayName%
+// TransferTransaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -56,11 +56,18 @@ namespace MicroCoin.Transactions
             bytes.AddRange(BitConverter.GetBytes(Fee));
             if (Payload.Length > 0)
                 bytes.AddRange((byte[])Payload);
-            bytes.AddRange(BitConverter.GetBytes((ushort)AccountKey.CurveType));
-            if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
+            if (AccountKey != null)
             {
-                bytes.AddRange(AccountKey.PublicKey.X);
-                bytes.AddRange(AccountKey.PublicKey.Y);
+                bytes.AddRange(BitConverter.GetBytes((ushort)AccountKey.CurveType));
+                if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
+                {
+                    bytes.AddRange(AccountKey.PublicKey.X);
+                    bytes.AddRange(AccountKey.PublicKey.Y);
+                }
+            }
+            else
+            {
+                bytes.AddRange(BitConverter.GetBytes((ushort)ECCurveType.Empty));
             }
             if (TransactionStyle == TransferType.BuyAccount)
             {

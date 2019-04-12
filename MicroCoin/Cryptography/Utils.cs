@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Utils.cs - Copyright (c) 2019 %UserDisplayName%
+// Utils.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -97,17 +97,11 @@ namespace MicroCoin.Cryptography
                             list.Insert(0, 0);
                             signature.R = list.ToArray();
                         }
-                        var ok = ecdsa.VerifyHash(data, signature.Signature);
-                        if (!ok)
-                        {
-                            Console.WriteLine("NOT");
-                        }
-                        return ok;
+                        return ecdsa.VerifyHash(data, signature.Signature);
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.Message);
                 }
             }
             var derSignature = new DerSequence(

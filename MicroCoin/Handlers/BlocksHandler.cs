@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// BlocksHandler.cs - Copyright (c) 2019 %UserDisplayName%
+// BlocksHandler.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -39,10 +39,6 @@ namespace MicroCoin.Handlers
         {
             var blocks = packet.Payload<BlockResponse>().Blocks;
             if (blocks.Count == 0) return;
-            foreach (var b in blocks)
-            {
-                Console.WriteLine("{0}: {1}", b.Header.BlockNumber, b.Header.Payload);
-            }
             blockChain.AddBlocks(blocks);
             
             if (blocks.Last().Id < packet.Node.BlockHeight)
@@ -62,14 +58,13 @@ namespace MicroCoin.Handlers
         public void HandleNewBlock(NetworkPacket packet)
         {
             var block = packet.Payload<NewBlockRequest>().Block;
-            Console.WriteLine("New block received with height {0}", block.Header.BlockNumber);
             if (block.Header.BlockNumber > blockChain.BlockHeight)
             {
                 NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
                 {
                     Message = new BlockRequest
                     {
-                        StartBlock = (uint)blockChain.BlockHeight,
+                        StartBlock = (uint)blockChain.BlockHeight + 1,
                         NumberOfBlocks = 100
                     }
                 };

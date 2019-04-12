@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// CheckPointService.cs - Copyright (c) 2019 %UserDisplayName%
+// CheckPointService.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,6 +40,9 @@ namespace MicroCoin.CheckPoints
         private readonly IList<CheckPointBlock> modifiedBlocks = new List<CheckPointBlock>();
         private readonly IList<Account> modifiedAccounts = new List<Account>();
 
+        private readonly Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
+        private readonly object checkPointLock = new object();
+
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator, IBlockChain blockChain, ILogger<CheckPointService> logger)
         {
             this.checkPointStorage = checkPointStorage;
@@ -56,23 +59,6 @@ namespace MicroCoin.CheckPoints
             account = block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
             modifiedAccounts.Add(account);
             return account;
-            /*CheckPointBlock block;
-            if (@readonly)
-            {
-                int blockNumber = accountNumber / 5;
-                block = modifiedBlocks.FirstOrDefault(p => p.Id == blockNumber);
-                if (block != null)
-                {
-                    return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-                }
-                else
-                {
-                    return checkPointStorage.GetAccount(accountNumber);
-                }
-            }
-            block = GetBlockForAccount(accountNumber);
-            return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-            */
         }
 
         protected CheckPointBlock GetBlockForAccount(AccountNumber accountNumber)
@@ -81,103 +67,105 @@ namespace MicroCoin.CheckPoints
             var block = modifiedBlocks.FirstOrDefault(p => p.Id == blockNumber);
             if (block != null) return block;
             block = checkPointStorage.GetBlock(blockNumber);
-            //modifiedBlocks.Add(block);
             return block;
         }
 
-        private Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
+        protected CheckPointBlock GetBlock(int blockNumber)
+        {
+            var block = modifiedBlocks.FirstOrDefault(p => p.Id == blockNumber);
+            if (block != null) return block;
+            block = checkPointStorage.GetBlock(blockNumber);
+            return block;
+        }
 
         public void ApplyBlock(Block block)
-        {
-            CheckPointBlock checkPointBlock = new CheckPointBlock
+        {           
+            lock (checkPointLock)
             {
-                Header = block.Header
-            };
-            for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
-            {
-                ulong totalFee = 0;
-                if (block.Transactions != null)
-                    totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
-                var account = new Account
+                if (GetBlock((int)block.Id) != null) return;
+                CheckPointBlock checkPointBlock = new CheckPointBlock
                 {
-                    AccountNumber = i,
-                    BlockNumber = block.Id,
-                    NumberOfOperations = 0,
-                    UpdatedBlock = block.Id,
-                    Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
+                    Header = block.Header
                 };
-                account.AccountInfo.AccountKey = block.Header.AccountKey;
-                account.AccountInfo.State = AccountState.Normal;
-                checkPointBlock.Accounts.Add(account);
-            }
-            if (block.Transactions != null)
-            {
-                var st = Stopwatch.StartNew();
-                foreach (ITransaction item in block.Transactions)
+                for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
                 {
-                    Type validatorType = null;
-                    if (validators.ContainsKey(item.GetType()))
+                    ulong totalFee = 0;
+                    if (block.Transactions != null)
+                        totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
+                    var account = new Account
                     {
-                        validatorType = validators[item.GetType()];
-                    }
-                    else
+                        AccountNumber = i,
+                        BlockNumber = block.Id,
+                        NumberOfOperations = 0,
+                        UpdatedBlock = block.Id,
+                        Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
+                    };
+                    account.AccountInfo.AccountKey = block.Header.AccountKey;
+                    account.AccountInfo.State = AccountState.Normal;
+                    checkPointBlock.Accounts.Add(account);
+                }
+                if (block.Transactions != null)
+                {
+                    var st = Stopwatch.StartNew();
+                    foreach (ITransaction item in block.Transactions)
                     {
-                        validatorType = typeof(ITransactionValidator<>).MakeGenericType(item.GetType());
-                        validators.Add(item.GetType(), validatorType);
-                    }
-                    dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
-                    if (validator != null)                        
-                    {                        
-                        if (!validator.IsValid((dynamic)item))
+                        Type validatorType = null;
+                        if (validators.ContainsKey(item.GetType()))
                         {
-                            validator.IsValid((dynamic)item);
-                            throw new Exception("Invalid transaction");
+                            validatorType = validators[item.GetType()];
                         }
                         else
                         {
-                            var modified = item.Apply(this);
-                            foreach(var account in modified)
+                            validatorType = typeof(ITransactionValidator<>).MakeGenericType(item.GetType());
+                            validators.Add(item.GetType(), validatorType);
+                        }
+                        dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
+                        if (validator != null && item != null)
+                        {
+                            if (!validator.IsValid((dynamic)item))
                             {
-                                account.UpdatedBlock = block.Id;
-                                if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
+                                validator.IsValid((dynamic)item);
+                                blockChain.DeleteBlocks(block.Id);
+                                throw new Exception("Invalid transaction");
+                            }
+                            else
+                            {
+                                var modified = item.Apply(this);
+                                foreach (var account in modified)
                                 {
-                                    modifiedAccounts.Add(account);
+                                    account.UpdatedBlock = block.Id;
+                                    if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+                                    {
+                                        modifiedAccounts.Add(account);
+                                    }
                                 }
-                                
-                                /*var accountBlock = modifiedBlocks.FirstOrDefault(p => p.Id == account.AccountNumber / 5);
-                                if (accountBlock == null)
-                                {
-                                    accountBlock = GetBlockForAccount(account.AccountNumber);
-                                    modifiedBlocks.Add(accountBlock);
-                                }
-                                accountBlock.Accounts[account.AccountNumber % 5] = account;*/
                             }
                         }
+                        else
+                        {
+                            GetAccount(item.SignerAccount).NumberOfOperations += 1;
+                            logger.LogWarning("No validator found for transaction type {0}", item.GetType());
+                        }
                     }
-                    else
+                    st.Stop();
+                    if (block.Transactions.Count >= 10)
                     {
-                        GetAccount(item.SignerAccount).NumberOfOperations += 1;
-                        logger.LogWarning("No validator found for transaction type {0}", item.GetType());
+                        double speed = 0;
+                        if (st.ElapsedMilliseconds > 0)
+                        {
+                            speed = block.Transactions.Count / (st.Elapsed.TotalSeconds);
+                        }
+                        logger.LogInformation("Processed {0} transactions in {1}, Speed {2} T/s", block.Transactions.Count, st.Elapsed.TotalSeconds, speed);
                     }
                 }
-                st.Stop();
-                if (block.Transactions.Count >= 10)
+                modifiedBlocks.Add(checkPointBlock);
+                if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                 {
-                    double speed = 0;
-                    if (st.ElapsedMilliseconds > 0)
-                    {
-                        speed = block.Transactions.Count / (st.Elapsed.TotalSeconds);
-                    }
-                    logger.LogInformation("Processed {0} transactions in {1}, Speed {2} T/s", block.Transactions.Count, st.Elapsed.TotalSeconds, speed);
+                    checkPointStorage.AddBlocks(modifiedBlocks);
+                    checkPointStorage.AddAccounts(modifiedAccounts);
+                    modifiedBlocks.Clear();
+                    modifiedAccounts.Clear();
                 }
-            }
-            modifiedBlocks.Add(checkPointBlock);
-            if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
-            {
-                checkPointStorage.AddBlocks(modifiedBlocks);
-                checkPointStorage.AddAccounts(modifiedAccounts);
-                modifiedBlocks.Clear();
-                modifiedAccounts.Clear();
             }
         }
 
@@ -188,8 +176,6 @@ namespace MicroCoin.CheckPoints
             {
                 var block = blockChain.GetBlock(i);                
                 if (block == null) return;
-                if (block.Transactions != null)
-                    Debug.WriteLine("OK");
                 ApplyBlock(block);
             }
         }

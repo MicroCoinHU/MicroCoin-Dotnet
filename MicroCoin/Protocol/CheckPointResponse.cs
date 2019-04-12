@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// CheckPointResponse.cs - Copyright (c) 2019 %UserDisplayName%
+// CheckPointResponse.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -111,7 +111,6 @@ namespace MicroCoin.Protocol
                         long pos = unCompressed.Position;
                         HeaderEnd = pos;
                         Offsets = new uint[(EndBlock - StartBlock + 1)];
-                        //var checkPoints = new List<CheckPointBlock>();
                         for (int i = 0; i < Offsets.Length; i++)
                         {
                             Offsets[i] = (uint)(br2.ReadUInt32());
@@ -120,18 +119,8 @@ namespace MicroCoin.Protocol
                             unCompressed.Position = Offsets[i] + HeaderEnd;
                             cb.LoadFromStream(unCompressed);
                             CheckPoints.Add(cb);
-                            if (i % 10000 == 0)
-                            {
-                                //ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
-                                //list.Clear();
-                            }
-                            //Console.WriteLine("Adding block {0}", cb.Header.BlockNumber);
                             unCompressed.Position = p;
                         }
-                        //if (list.Count > 0)
-                        //{
-                        //    ServiceLocator.GetService<ICheckPointStorage>().AddBlocks(list);
-                        //}
                     }
                 }
             }

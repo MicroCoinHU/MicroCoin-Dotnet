@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// CheckPointLiteDbStorage.cs - Copyright (c) 2019 %UserDisplayName%
+// CheckPointLiteDbStorage.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ namespace MicroCoin.CheckPoints
     {
         private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
         private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
+        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
 
         public CheckPointLiteDbStorage()
         {
@@ -68,47 +69,43 @@ namespace MicroCoin.CheckPoints
 
         public void AddAccounts(IList<Account> modifiedAccounts)
         {
-            accountdb.GetCollection<Account>("a").Upsert(modifiedAccounts);
+            accountdb.GetCollection<Account>().Upsert(modifiedAccounts);
         }
 
         public void AddBlock(CheckPointBlock block)
         {
-            accountdb.GetCollection<Account>("a").Upsert(block.Accounts);
-            db.GetCollection<CheckPointBlock>().Upsert(block);
+            accountdb.GetCollection<Account>().Upsert(block.Accounts);
+            checkpointdb.GetCollection<CheckPointBlock>().Insert(block);
         }
 
         public void AddBlocks(IEnumerable<CheckPointBlock> blocks)
         {
-            accountdb.GetCollection<Account>("a").Upsert(blocks.SelectMany(p => p.Accounts));
-            db.GetCollection<CheckPointBlock>().Upsert(blocks);
+            accountdb.GetCollection<Account>().Upsert(blocks.SelectMany(p => p.Accounts));
+            checkpointdb.GetCollection<CheckPointBlock>().InsertBulk(blocks);
         }
 
         public void Dispose()
         {
             db.Dispose();
+            checkpointdb.Dispose();
+            accountdb.Dispose();
         }
 
         public Account GetAccount(AccountNumber accountNumber)
         {
-            return accountdb.GetCollection<Account>("a").FindById((int)accountNumber);
-            /*
-            var acc = 
-            return acc; */
-            var block = GetBlock(accountNumber / 5);
-            if (block != null)
-                return block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-            return null; 
+            return accountdb.GetCollection<Account>().FindById((int)accountNumber);
         }
 
         public CheckPointBlock GetBlock(int blockNumber)
         {
-            var cb = db.GetCollection<CheckPointBlock>().FindById(blockNumber);
-            cb.Header = db.GetCollection<BlockHeader>("bh").FindById(blockNumber);
+            var cb = checkpointdb.GetCollection<CheckPointBlock>().FindById(blockNumber);
+            if (cb == null) return null;
+            cb.Header = db.GetCollection<BlockHeader>().FindById(blockNumber);
             var minAccount = blockNumber * 5;
             var maxAccount = blockNumber * 5 + 4;
             for(var i = minAccount; i <= maxAccount; i++)
             {
-                cb.Accounts.Add(accountdb.GetCollection<Account>("a").FindById(i));
+                cb.Accounts.Add(accountdb.GetCollection<Account>().FindById(i));
             }
             return cb;
         }

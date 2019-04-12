@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Program.cs - Copyright (c) 2019 %UserDisplayName%
+// Program.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -42,30 +42,39 @@ namespace MicroCoin
 {
     class Program
     {
-
         static async Task Main(string[] args)
         {
+            
             Console.WriteLine("Hello World!");
-
             var mapper = BsonMapper.Global;
             mapper.ResolveMember = (type, memberInfo, memberMapper) =>
             {
-                if (memberMapper.MemberName == "CurveType" || memberMapper.MemberName == "ct")
+                if (memberMapper.DataType  == typeof(ECCurveType))
                 {
                     memberMapper.Serialize = (obj, m) => new BsonValue((int)((ushort)obj));
                     memberMapper.Deserialize = (value, m) => (ECCurveType)value.AsInt32;
                 }
-                else if (memberMapper.MemberName == "State")
+                else if (memberMapper.DataType == typeof(AccountState))
                 {
                     memberMapper.Serialize = (obj, m) => new BsonValue((int)obj);
                     memberMapper.Deserialize = (value, m) => (AccountState)value.AsInt32;
                 }
+                else if(memberMapper.DataType == typeof(TransactionType))
+                {
+                    memberMapper.Serialize = (obj, m) => new BsonValue((int)(uint)obj);
+                    memberMapper.Deserialize = (value, m) => (TransactionType)value.AsInt32;
+                }
+                else if (memberMapper.DataType == typeof(TransferTransaction.TransferType))
+                {
+                    memberMapper.Serialize = (obj, m) => new BsonValue((int)(byte)obj);
+                    memberMapper.Deserialize = (value, m) => (TransferTransaction.TransferType)value.AsInt32;
+                }
             };
-            mapper.RegisterType<Currency>(p => p.value, p => new Currency(p.AsDecimal));
+            mapper.RegisterType<Currency>(p => (long)(ulong)p, p => (Currency)p.AsInt64);
             mapper.RegisterType<Hash>(p => (byte[])p, p => p.AsBinary);
             mapper.RegisterType<ByteString>(p => (byte[])p, p => p.AsBinary);
             mapper.RegisterType<Timestamp>(p => (DateTime)p, p => p.AsDateTime);
-            mapper.RegisterType<AccountNumber>(p => (int)p, p => new AccountNumber((uint)p.AsInt32));
+            mapper.RegisterType<AccountNumber>(p => (int)p, p => new AccountNumber((uint)p.AsInt32));            
 
             mapper.Entity<ECKeyPair>()
                 .Field(p => p.CurveType, "ct")
@@ -158,12 +167,7 @@ namespace MicroCoin
                 if (node.NetClient != null && node.Connected)
                     node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
             }, ThreadOption.BackgroundThread, false);
-            /*
-            ServiceLocator.EventAggregator.GetEvent<BlocksAdded>().Subscribe(t =>
-            {
-                Console.WriteLine("Added block#{0} to blockchain with {1} transactions", t.Id, t.Transactions == null ? 0 : t.Transactions.Count);
-            }, ThreadOption.PublisherThread, false);
-            */
+
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {
                 throw new Exception("NO FIX SEEDS FOUND");
@@ -193,7 +197,6 @@ namespace MicroCoin
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine(e.Message + " " + bestNode.EndPoint.ToString());
                             break;
                         }
                         var blocks = response.Payload<BlockResponse>().Blocks;

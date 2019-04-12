@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Params.cs - Copyright (c) 2019 %UserDisplayName%
+// Params.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Reflection;
 using System.Text;
 
 namespace MicroCoin
@@ -30,6 +31,14 @@ namespace MicroCoin
         public static uint NetworkPacketMagic { get; internal set; } = 0x0A043580;
         public static ushort NetworkProtocolVersion { get; set; } = 6;
         public static ushort NetworkProtocolAvailable { get; set; } = 6;
+        public static string ProgramVersion
+        {
+            get
+            {
+                var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                return assemblyVersion + ".NET DEV";
+            }
+        }
         public static ICollection<IPEndPoint> FixedSeedServers { get; set; } = new HashSet<IPEndPoint>()
         {
             new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4004),

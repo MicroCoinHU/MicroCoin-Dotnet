@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// BlockChainService.cs - Copyright (c) 2019 %UserDisplayName%
+// BlockChainService.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,10 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Common;
+using MicroCoin.Transactions;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -73,11 +76,17 @@ namespace MicroCoin.BlockChain
             }
         }
 
+        public void RemoveBlocks(uint from)
+        {
+            
+        }
+
         protected void ProcessBlocks(IEnumerable<Block> blocks)
         {
-            uint badBlockNumber = blocks.Max(p => p.Id) + 1;
+            uint badBlockNumber = uint.MaxValue;
             object blockLock = new object();
-            Parallel.ForEach(blocks, (block, state) => {
+            Parallel.ForEach(blocks, (block, state) =>
+            {
                 if (!block.Header.IsValid())
                 {
                     lock (blockLock)
@@ -90,10 +99,18 @@ namespace MicroCoin.BlockChain
                     }
                 }
             });
-            foreach (var block in blocks)
+            foreach (var block in blocks.Where(b => b.Id < badBlockNumber))
             {
-                blockCache.Add(block);
+                if(block.Id <= BlockHeight)
+                {
+                    var myBlock = GetBlock(block.Id);
+                    if(myBlock.Header.CompactTarget >= block.Header.CompactTarget)
+                    {
+                        continue; // My chain is "longer" or equal, so block is invalid for me, or already included in the chain
+                    }
+                }
                 eventAggregator.GetEvent<BlocksAdded>().Publish(block);
+                blockCache.Add(block);
             }
         }
 
@@ -121,7 +138,7 @@ namespace MicroCoin.BlockChain
                 logger.LogInformation("Saving blocks");
                 await blockChainStorage.AddBlocksAsync(blocks);
                 blockCache.Clear();
-            }            
+            }
         }
 
         public void Dispose()
@@ -131,7 +148,6 @@ namespace MicroCoin.BlockChain
                 blockChainStorage.AddBlocks(blockCache);
                 blockCache.Clear();
             }
-            return;
         }
 
         public Block GetBlock(uint blockNumber)
@@ -139,6 +155,11 @@ namespace MicroCoin.BlockChain
             var block = blockCache.FirstOrDefault(p => p.Id == blockNumber);
             if (block != null) return block;
             return blockChainStorage.GetBlock(blockNumber);
+        }
+
+        public void DeleteBlocks(uint from)
+        {
+            blockChainStorage.DeleteBlocks(from);
         }
     }
 }

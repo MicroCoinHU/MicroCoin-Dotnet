@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// BlockChainLiteDbStorage.cs - Copyright (c) 2019 %UserDisplayName%
+// BlockChainLiteDbStorage.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,96 +32,102 @@ namespace MicroCoin.BlockChain
         public BlockChainLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
-            mapper.Entity<Block>()
-                //.Field(p => p.Transactions, "a")
-                .Ignore(p => p.Transactions)
-                .Field(p => p.Header, "b")
-                .DbRef(p => p.Header, "bh");
-            //.DbRef(p => p.Transactions, "tr");
+            mapper.Entity<ITransaction>().Id(p => p._id).Ignore(p => p.AccountKey);
+#if DEBUG
             mapper.Entity<ITransaction>()
-                .Id(p => p._id)
-                .Ignore(p => p.AccountKey)
-                .Field(p => p.SignerAccount, "b")
-                .Field(p => p.TargetAccount, "c")
-                .Field(p => p.TransactionType, "d")
-                .Field(p => p.Fee, "e")
-                .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g")
-                .Field(p => p.Block, "bl");
-            mapper.Entity<Transaction>()
-                .Ignore(p => p.AccountKey)
-                .Field(p => p.SignerAccount, "b")
-                .Field(p => p.TargetAccount, "c")
-                .Field(p => p.TransactionType, "d")
-                .Field(p => p.Fee, "e")
-                .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g")
-                ;
+                .Field(p => p.Block, "a")
+                .Field(p => p.Fee, "b")
+                .Field(p => p.Payload, "c")
+                .Field(p => p.Signature, "d")
+                .Field(p => p.SignerAccount, "e")
+                .Field(p => p.TargetAccount, "f")
+                .Field(p => p.TransactionType, "g");
+
             mapper.Entity<ChangeKeyTransaction>()
                 .Ignore(p => p.AccountKey)
-                .Field(p => p.SignerAccount, "b")
-                .Field(p => p.TargetAccount, "c")
-                .Field(p => p.TransactionType, "d")
-                .Field(p => p.Fee, "e")
-                .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g")
-                .Field(p => p.NumberOfOperations, "h")
+                .Field(p => p.Block, "a")
+                .Field(p => p.Fee, "b")
+                .Field(p => p.Payload, "c")
+                .Field(p => p.Signature, "d")
+                .Field(p => p.SignerAccount, "e")
+                .Field(p => p.TargetAccount, "f")
+                .Field(p => p.TransactionType, "g")
+                .Field(p => p.Amount, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.Amount, "j");
-                
-            mapper.Entity<ListAccountTransaction>()
-                .Ignore(p => p.AccountKey)
-                .Field(p => p.SignerAccount, "b")
-                .Field(p => p.TargetAccount, "c")
-                .Field(p => p.TransactionType, "d")
-                .Field(p => p.Fee, "e")
-                .Field(p => p.Payload, "f")
-                .Field(p => p.Signature, "g")
-                .Field(p => p.AccountPrice, "h")
-                .Field(p => p.Amount, "i")
-                .Field(p => p.AccountToPay, "j")
-                .Field(p => p.LockedUntilBlock, "k")
-                .Field(p => p.NewPublicKey, "l")
-                .Field(p => p.NumberOfOperations, "m")
+                .Field(p => p.NumberOfOperations, "j")                
                 ;
+                
+            mapper.Entity<ListAccountTransaction>().Ignore(p => p.AccountKey)
+                .Field(p => p.Block, "a")
+                .Field(p => p.Fee, "b")
+                .Field(p => p.Payload, "c")
+                .Field(p => p.Signature, "d")
+                .Field(p => p.SignerAccount, "e")
+                .Field(p => p.TargetAccount, "f")
+                .Field(p => p.TransactionType, "g")
+                .Field(p => p.Amount, "h")
+                .Field(p => p.NewPublicKey, "i")
+                .Field(p => p.NumberOfOperations, "j")
+                .Field(p=>p.AccountPrice,"k")
+                .Field(p=>p.AccountToPay, "l")
+                .Field(p=>p.LockedUntilBlock, "m")                
+                ;
+
             mapper.Entity<TransferTransaction>()
                 .Ignore(p => p.AccountKey)
-                .Field(p => p.SignerAccount, "b")
-                .Field(p => p.TargetAccount, "c")
-                .Field(p => p.SellerAccount, "d")
-                .Field(p => p.TransactionStyle, "e")
-                .Field(p => p.NumberOfOperations, "f")
-                .Field(p => p.NewAccountKey, "g")
-                .Field(p => p.AccountPrice, "h")
-                .Field(p => p.Amount, "i")
-                .Field(p => p.TransactionType, "j")
-                .Field(p => p.Fee, "k")
-                .Field(p => p.Payload, "l")
-                .Field(p => p.Signature, "m")
+                .Field(p => p.Block, "a")
+                .Field(p => p.Fee, "b")
+                .Field(p => p.Payload, "c")
+                .Field(p => p.Signature, "d")
+                .Field(p => p.SignerAccount, "e")
+                .Field(p => p.TargetAccount, "f")
+                .Field(p => p.TransactionType, "g")
+                .Field(p => p.Amount, "h")
+                .Field(p => p.NewAccountKey, "i")
+                .Field(p => p.NumberOfOperations, "j")
+                .Field(p => p.AccountPrice, "k")
+                .Field(p => p.TransactionStyle, "l")
+                .Field(p => p.SellerAccount, "m")
                 ;
-            trdb.GetCollection<ITransaction>("tr").EnsureIndex(p => p.Block);
+
+            mapper.Entity<ChangeAccountInfoTransaction>().Ignore(p => p.AccountKey)
+                .Field(p => p.Block, "a")
+                .Field(p => p.Fee, "b")
+                .Field(p => p.Payload, "c")
+                .Field(p => p.Signature, "d")
+                .Field(p => p.SignerAccount, "e")
+                .Field(p => p.TargetAccount, "f")
+                .Field(p => p.TransactionType, "g")
+                .Field(p => p.Amount, "h")
+                .Field(p => p.NewAccountKey, "i")
+                .Field(p => p.NumberOfOperations, "j")
+                .Field(p => p.NewName, "k")
+                .Field(p => p.NewType, "l");
+#endif
+
+            trdb.GetCollection<ITransaction>().EnsureIndex(p => p.Block);
         }
 
         public int Count
         {
             get
             {
-                return db.GetCollection<BlockHeader>("bh").Count();
+                return db.GetCollection<BlockHeader>().Count();
             }
         }
 
-        public int BlockHeight => db.GetCollection<BlockHeader>("bh").Max(p => p.Id).AsInt32;
+        public int BlockHeight => db.GetCollection<BlockHeader>().Max(p => p.Id).AsInt32;
 
         public void AddBlock(Block block)
         {
-            db.GetCollection<BlockHeader>("bh").Upsert(block.Header);
-            trdb.GetCollection<ITransaction>("tr").Upsert(block.Transactions);
+            db.GetCollection<BlockHeader>().Insert(block.Header);
+            trdb.GetCollection<ITransaction>().InsertBulk(block.Transactions);
         }
 
         public void AddBlocks(IEnumerable<Block> blocks)
         {
-            db.GetCollection<BlockHeader>("bh").Upsert(blocks.Select(p => p.Header));
-            trdb.GetCollection<ITransaction>("tr").Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
+            db.GetCollection<BlockHeader>().InsertBulk(blocks.Select(p => p.Header));
+            trdb.GetCollection<ITransaction>().InsertBulk(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
         }
 
         public async Task AddBlocksAsync(IEnumerable<Block> blocks)
@@ -129,13 +135,18 @@ namespace MicroCoin.BlockChain
             
             var t1 = Task.Factory.StartNew(() =>
             {
-                db.GetCollection<BlockHeader>("bh").Upsert(blocks.Select(p => p.Header));
+                db.GetCollection<BlockHeader>().InsertBulk(blocks.Select(p => p.Header));
             });
             var t2 = Task.Factory.StartNew(() =>
             {
-                trdb.GetCollection<ITransaction>("tr").Upsert(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
+                trdb.GetCollection<ITransaction>().InsertBulk(blocks.Where(p => p.Transactions != null).SelectMany(p => p.Transactions));
             });
             await Task.WhenAll(t1, t2);            
+        }
+
+        public void DeleteBlocks(uint from)
+        {
+            db.GetCollection<BlockHeader>().Delete(p => p.Id >= from);
         }
 
         public void Dispose()
@@ -145,8 +156,8 @@ namespace MicroCoin.BlockChain
 
         public Block GetBlock(uint blockNumber)
         {
-            var bt = Task<BlockHeader>.Factory.StartNew(() => db.GetCollection<BlockHeader>("bh").FindById((int)blockNumber));
-            var tt = Task<IList<ITransaction>>.Factory.StartNew(() => trdb.GetCollection<ITransaction>("tr").Find(p => p.Block == blockNumber).ToList());
+            var bt = Task<BlockHeader>.Factory.StartNew(() => db.GetCollection<BlockHeader>().FindById((int)blockNumber));
+            var tt = Task<IList<ITransaction>>.Factory.StartNew(() => trdb.GetCollection<ITransaction>().Find(p => p.Block == blockNumber).ToList());
             Task.WaitAll(bt, tt);
             var blockHeader = bt.Result;
             if (blockHeader == null) return null;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// NetClient.cs - Copyright (c) 2019 %UserDisplayName%
+// NetClient.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -57,8 +57,6 @@ namespace MicroCoin.Net
             {
                 if (IsConnected) return IsConnected;
                 Node = node;
-                var old = TcpClient.ReceiveTimeout;
-                TcpClient.ReceiveTimeout = 500;
                 var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, null, null);
                 asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
                 try
@@ -69,7 +67,6 @@ namespace MicroCoin.Net
                 {
                     return false;
                 }
-                TcpClient.ReceiveTimeout = old;
                 Node.NetClient = this;
                 return IsConnected;
             }
@@ -128,6 +125,7 @@ namespace MicroCoin.Net
                             }
                             if (header.RequestType != RequestType.Response || header.Operation != packet.Header.Operation || header.RequestId != packet.Header.RequestId)
                             {
+                                logger.LogWarning("Dropping package");
                                 br.ReadBytes(header.DataLength); // Drop package
                                 continue;
                             }
@@ -147,15 +145,22 @@ namespace MicroCoin.Net
         {
             lock (clientLock)
             {
-                logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
-                using (var sendStream = new MemoryStream())
+                try
                 {
-                    packet.Header.DataLength = packet.RawData.Length;
-                    packet.Header.SaveToStream(sendStream);
-                    sendStream.Write(packet.RawData, 0, packet.RawData.Length);
-                    sendStream.Position = 0;
-                    sendStream.CopyTo(TcpClient.GetStream());
-                    TcpClient.GetStream().Flush();
+                    logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
+                    using (var sendStream = new MemoryStream())
+                    {
+                        packet.Header.DataLength = packet.RawData.Length;
+                        packet.Header.SaveToStream(sendStream);
+                        sendStream.Write(packet.RawData, 0, packet.RawData.Length);
+                        sendStream.Position = 0;
+                        sendStream.CopyTo(TcpClient.GetStream());
+                        TcpClient.GetStream().Flush();
+                    }
+                }
+                catch (Exception)
+                {
+                    return;
                 }
             }
         }
@@ -197,14 +202,15 @@ namespace MicroCoin.Net
                                 if (header.Error > 0)
                                 {
                                     ByteString message = ByteString.ReadFromStream(br);
-                                    logger.LogError(this.TcpClient.Client.RemoteEndPoint.ToString() + " " + message);
+                                    logger.LogError(TcpClient.Client.RemoteEndPoint.ToString() + " " + message);
                                     break;
                                 }
                                 var packet = new NetworkPacket(header)
                                 {
                                     Node = Node,
                                     RawData = br.ReadBytes(header.DataLength)
-                                };                 
+                                };
+                                logger.LogInformation("Received network packet {0} {1} - {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint);
                                 eventAggregator.GetEvent<NetworkEvent>().Publish(packet);
                             }
                         }

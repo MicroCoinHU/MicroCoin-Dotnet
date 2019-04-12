@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// ChangeKeyTransaction.cs - Copyright (c) 2019 %UserDisplayName%
+// ChangeKeyTransaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -134,10 +134,6 @@ namespace MicroCoin.Transactions
         public override IList<Account> Apply(ICheckPointService checkPointService)
         {
             var account = checkPointService.GetAccount(TargetAccount);
-            if(account.AccountNumber == 36620)
-            {
-                Debug.WriteLine("OK");
-            }
             account.AccountInfo.AccountKey = NewAccountKey;
             var signer = checkPointService.GetAccount(SignerAccount);
             signer.Balance -= Fee;

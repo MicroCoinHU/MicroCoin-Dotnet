@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Transaction.cs - Copyright (c) 2019 %UserDisplayName%
+// Transaction.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ namespace MicroCoin.Transactions
             set => _payload = value;
         }
         public ECSignature Signature { get; set; }
-        public ECKeyPair AccountKey { get; set; }
+        public ECKeyPair AccountKey { get; set; } = new ECKeyPair();
         public Currency Fee { get; set; }
         public Currency Amount { get; set; }
         public abstract byte[] GetHash();

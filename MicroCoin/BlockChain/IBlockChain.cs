@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// IBlockChain.cs - Copyright (c) 2019 %UserDisplayName%
+// IBlockChain.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@ namespace MicroCoin.BlockChain
         void AddBlock(Block block);
         void AddBlocks(IEnumerable<Block> blocks);
         Task AddBlocksAsync(IEnumerable<Block> blocks);
+        void DeleteBlocks(uint from);
         void Dispose();
         Block GetBlock(uint blockNumber);
     }
