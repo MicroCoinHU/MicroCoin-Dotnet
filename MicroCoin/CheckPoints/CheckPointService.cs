@@ -29,9 +29,17 @@ using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using MicroCoin.Handlers;
 
 namespace MicroCoin.CheckPoints
 {
+    public class InvalidTransactionException : Exception
+    {
+        public InvalidTransactionException(string message) : base(message)
+        {
+        }
+    }
+
     public class CheckPointService : ICheckPointService
     {
         private readonly ICheckPointStorage checkPointStorage;
@@ -42,14 +50,29 @@ namespace MicroCoin.CheckPoints
         private readonly IList<Account> modifiedAccounts = new List<Account>();
 
         private readonly Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
+        private readonly IList<string> pendingTransactions = new List<string>();
         private readonly object checkPointLock = new object();
-
+        private ulong accountWork = 0;
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator, IBlockChain blockChain, ILogger<CheckPointService> logger)
         {
             this.checkPointStorage = checkPointStorage;
             this.blockChain = blockChain;
             this.logger = logger;
-            eventAggregator.GetEvent<BlocksAdded>().Subscribe(ApplyBlock, ThreadOption.PublisherThread);
+            eventAggregator.GetEvent<BlocksAdded>().Subscribe(ProcessBlock, ThreadOption.PublisherThread);
+            eventAggregator.GetEvent<NewTransaction>().Subscribe(HandleNewTransaction, ThreadOption.PublisherThread);
+        }
+
+        public void HandleNewTransaction(ITransaction transaction)
+        {
+            try
+            {
+                ProcessTransaction(transaction);
+                logger.LogInformation("Processed transaction {0} signer: {1}", transaction.TransactionType, transaction.SignerAccount);
+            }
+            catch (InvalidTransactionException e)
+            {
+                logger.LogWarning("Skipping invalid pending transaction {0}", e.Message);
+            }
         }
 
         public Account GetAccount(AccountNumber accountNumber, bool @readonly = false)
@@ -79,7 +102,7 @@ namespace MicroCoin.CheckPoints
             return block;
         }
 
-        public void ApplyBlock(Block block)
+        public void ProcessBlock(Block block)
         {           
             lock (checkPointLock)
             {
@@ -107,64 +130,22 @@ namespace MicroCoin.CheckPoints
                 }
                 if (block.Transactions != null)
                 {
-                    var st = Stopwatch.StartNew();
                     foreach (ITransaction item in block.Transactions)
                     {
-                        Type validatorType = null;
-                        if (validators.ContainsKey(item.GetType()))
+                        try
                         {
-                            validatorType = validators[item.GetType()];
+                            ProcessTransaction(item, block);
                         }
-                        else
+                        catch (InvalidTransactionException e)
                         {
-                            validatorType = typeof(ITransactionValidator<>).MakeGenericType(item.GetType());
-                            validators.Add(item.GetType(), validatorType);
+                            ProcessTransaction(item, block);
                         }
-                        dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
-                        if (validator != null && item != null)
-                        {
-                            if (!validator.IsValid((dynamic)item))
-                            {
-                                validator.IsValid((dynamic)item);
-                                blockChain.DeleteBlocks(block.Id);
-                                throw new Exception("Invalid transaction");
-                            }
-                            else
-                            {
-                                var modified = item.Apply(this);
-                                foreach (var account in modified)
-                                {
-                                    account.UpdatedBlock = block.Id;
-                                    if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
-                                    {
-                                        modifiedAccounts.Add(account);
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            GetAccount(item.SignerAccount).TransactionCount += 1;
-                            logger.LogWarning("No validator found for transaction type {0}", item.GetType());
-                        }
-                    }
-                    st.Stop();
-                    if (block.Transactions.Count >= 10)
-                    {
-                        double speed = 0;
-                        if (st.ElapsedMilliseconds > 0)
-                        {
-                            speed = block.Transactions.Count / (st.Elapsed.TotalSeconds);
-                        }
-                        logger.LogInformation("#{0} block {1} transactions in {2}, Speed {3} Tx/s",
-                            block.Id,
-                            block.Transactions.Count,
-                            st.Elapsed.TotalSeconds, 
-                            speed);
                     }
                 }
                 logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
-                modifiedBlocks.Add(checkPointBlock);
+                accountWork += block.Header.CompactTarget;
+                checkPointBlock.AccumulatedWork = accountWork;
+                modifiedBlocks.Add(checkPointBlock);                
                 if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                 {
                     checkPointStorage.AddBlocks(modifiedBlocks);
@@ -175,6 +156,78 @@ namespace MicroCoin.CheckPoints
             }
         }
 
+        private void ProcessTransaction(ITransaction transaction, Block block = null)
+        {
+            lock (checkPointLock)
+            {
+                var sha = transaction.SHA();
+                if (pendingTransactions.Contains(sha))
+                {
+                    if (block != null)
+                    {
+                        var signer = GetAccount(transaction.SignerAccount);
+                        signer.UpdatedBlock = block.Id;
+                        pendingTransactions.Remove(sha);
+                    }
+                    return;
+                }
+                dynamic validator = GetValidator(transaction);
+                if (validator != null && transaction != null)
+                {
+                    if (!validator.IsValid((dynamic)transaction))
+                    {
+                        if (block != null)
+                        {
+                            blockChain.DeleteBlocks(block.Id);
+                        }
+                        throw new InvalidTransactionException("Invalid transaction");
+                    }
+                    ApplyTransaction(transaction, block);
+                }
+                else
+                {
+                    GetAccount(transaction.SignerAccount).TransactionCount += 1;
+                    logger.LogWarning("No validator found for transaction type {0}", transaction.GetType());
+                }
+                if (block == null)
+                {
+                    pendingTransactions.Add(sha);
+                }
+            }
+        }
+
+        private void ApplyTransaction(ITransaction transaction, Block block)
+        {
+            var modified = transaction.Apply(this);
+            foreach (var account in modified)
+            {
+                if (block != null)
+                {
+                    account.UpdatedBlock = block.Id;
+                }
+                if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+                {
+                    modifiedAccounts.Add(account);
+                }
+            }
+        }
+
+        private dynamic GetValidator(ITransaction transaction)
+        {
+            Type validatorType;
+            if (validators.ContainsKey(transaction.GetType()))
+            {
+                validatorType = validators[transaction.GetType()];
+            }
+            else
+            {
+                validatorType = typeof(ITransactionValidator<>).MakeGenericType(transaction.GetType());
+                validators.Add(transaction.GetType(), validatorType);
+            }
+            dynamic validator = ServiceLocator.ServiceProvider.GetService(validatorType);
+            return validator;
+        }
+
         public void LoadFromBlockChain()
         {
             var start = (blockChain.BlockHeight / 100) * 100;
@@ -182,7 +235,7 @@ namespace MicroCoin.CheckPoints
             {
                 var block = blockChain.GetBlock(i);                
                 if (block == null) return;
-                ApplyBlock(block);
+                ProcessBlock(block);
             }
         }
     }

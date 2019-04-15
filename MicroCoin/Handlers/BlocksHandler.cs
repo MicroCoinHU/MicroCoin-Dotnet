@@ -125,10 +125,6 @@ namespace MicroCoin.Handlers
         private void HandleRequest(NetworkPacket packet)
         {
             var request = packet.Payload<BlockRequest>();
-            if (request.StartBlock <= 1262 && 1262 <= request.EndBlock)
-            {
-                Console.WriteLine("Block");
-            }
             var blocks = blockChain.GetBlocks(request.StartBlock, request.EndBlock);
             if (blocks.Count() == request.EndBlock - request.StartBlock + 1)
             {

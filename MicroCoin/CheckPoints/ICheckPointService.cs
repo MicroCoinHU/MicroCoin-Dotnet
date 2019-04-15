@@ -24,7 +24,7 @@ namespace MicroCoin.CheckPoints
 {
     public interface ICheckPointService
     {
-        void ApplyBlock(Block block);
+        void ProcessBlock(Block block);
         Account GetAccount(AccountNumber accountNumber, bool @readonly = false);
         void LoadFromBlockChain();
     }

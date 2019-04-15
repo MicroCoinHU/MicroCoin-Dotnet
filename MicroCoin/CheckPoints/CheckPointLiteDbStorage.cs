@@ -28,9 +28,9 @@ namespace MicroCoin.CheckPoints
 {
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=C:\\Temp\\blockchain.db; Journal=false; Async=true");
-        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=C:\\Temp\\accounts.db; Journal=false; Async=true");
-        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=C:\\Temp\\checkpoints.db; Journal=false; Async=true");
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
+        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
+        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
 
         public CheckPointLiteDbStorage()
         {

@@ -57,6 +57,7 @@ namespace MicroCoin.Transactions
         bool SignatureValid();
         ECSignature GetSignature();
         Hash GetOpHash(uint block);
+        Hash SHA();
         IList<Account> Apply(ICheckPointService checkPointService);
     }
 }

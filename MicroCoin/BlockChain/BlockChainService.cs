@@ -79,7 +79,7 @@ namespace MicroCoin.BlockChain
         }
 
 
-        protected void ProcessBlocks(IEnumerable<Block> blocks)
+        protected bool ProcessBlocks(IEnumerable<Block> blocks)
         {
             uint badBlockNumber = uint.MaxValue;
             object blockLock = new object();
@@ -105,38 +105,59 @@ namespace MicroCoin.BlockChain
                     if (myBlock != null && myBlock.Header.CompactTarget >= block.Header.CompactTarget)
                     {
                         continue; // My chain is "longer" or equal, so block is invalid for me, or already included in the chain
+                                  // Skip it now, the sender will maintain the orphan chain
+                    }
+                    else if (myBlock != null && myBlock.Header.CompactTarget == block.Header.CompactTarget)
+                    {
+                        continue; // Already included
+                    }
+                    else if (myBlock != null && myBlock.Header.CompactTarget < block.Header.CompactTarget)
+                    {
+                        // I'm orphan?
+                        return false;
                     }
                 }
                 eventAggregator.GetEvent<BlocksAdded>().Publish(block);
                 blockCache.Add(block);
             }
+            return true;
         }
 
-        public void AddBlocks(IEnumerable<Block> blocks)
+        public bool AddBlocks(IEnumerable<Block> blocks)
         {
+            var newBlocksOk = false;
             try
             {
-                ProcessBlocks(blocks);
+                newBlocksOk = ProcessBlocks(blocks);
             }
             finally
             {
-                blockChainStorage.AddBlocks(blockCache);
+                if (newBlocksOk)
+                {
+                    blockChainStorage.AddBlocks(blockCache);
+                }
                 blockCache.Clear();
             }
+            return newBlocksOk;
         }
 
-        public async Task AddBlocksAsync(IEnumerable<Block> blocks)
+        public async Task<bool> AddBlocksAsync(IEnumerable<Block> blocks)
         {
+            var newBlocksOk = false;
             try
             {
-                ProcessBlocks(blocks);
+                newBlocksOk = ProcessBlocks(blocks);
             }
             finally
             {
-                logger.LogInformation("Saving blocks");
-                await blockChainStorage.AddBlocksAsync(blocks);
+                if (newBlocksOk)
+                {
+                    logger.LogInformation("Saving blocks");
+                    await blockChainStorage.AddBlocksAsync(blocks);
+                }
                 blockCache.Clear();
             }
+            return newBlocksOk;
         }
 
         public void Dispose()

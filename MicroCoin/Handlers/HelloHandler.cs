@@ -49,7 +49,7 @@ namespace MicroCoin.Handlers
                 Block = blockChain.GetBlock((uint)blockChain.BlockHeight),
                 WorkSum = 0
             };
-            packet.Node.NetClient.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response));
+            packet.Node.NetClient.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response), packet.Header.RequestId);
             CheckPeers(hello.NodeServers);
             if (hello.Block.Header.BlockNumber > blockChain.BlockHeight)
             {

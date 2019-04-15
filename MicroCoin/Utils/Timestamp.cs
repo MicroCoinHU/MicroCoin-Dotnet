@@ -30,14 +30,14 @@ namespace MicroCoin.Types
         }
 
         public static implicit operator Timestamp(DateTime dt)
-        {            
-            return new Timestamp((uint)dt.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds);
+        {                       
+            return new Timestamp((uint)dt.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds);
         }
 
         public static implicit operator DateTime(Timestamp t)
         {
             DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);            
-            dtDateTime = dtDateTime.AddSeconds(t._unixTimestamp).ToLocalTime();
+            dtDateTime = dtDateTime.AddSeconds(t._unixTimestamp);
             return dtDateTime;
         }
 
@@ -54,6 +54,16 @@ namespace MicroCoin.Types
         public override string ToString()
         {
             return ((DateTime)this).ToString();
+        }
+
+        public static explicit operator int(Timestamp v)
+        {
+            return unchecked((int)v._unixTimestamp);
+        }
+
+        public static explicit operator Timestamp(int v)
+        {
+            return new Timestamp(unchecked((uint)v));
         }
     }
 }

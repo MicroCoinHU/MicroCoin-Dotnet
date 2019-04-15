@@ -158,8 +158,18 @@ namespace MicroCoin.Transactions
         {
             if (transaction.Fee < 0) return false;
             if (!transaction.IsValid()) return false;
+
+            var blockHeight = blockChain.BlockHeight;
+
             var signerAccount = checkPointService.GetAccount(transaction.SignerAccount);
+            //if (signerAccount.AccountInfo.State != AccountState.Normal) return false;
+
             var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
+            //if (targetAccount.AccountInfo.State != AccountState.Normal) return false;
+
+            if (signerAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
+            if (targetAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
+
             if (signerAccount.Balance < transaction.Fee) return false;
             if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
             {

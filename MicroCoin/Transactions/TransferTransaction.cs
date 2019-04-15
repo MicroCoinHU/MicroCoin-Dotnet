@@ -163,6 +163,7 @@ namespace MicroCoin.Transactions
                 sender.Balance -= Amount;
                 sender.Balance -= Fee;
                 target.AccountInfo.AccountKey = NewAccountKey;
+                target.AccountInfo.State = AccountState.Normal;
                 sender.TransactionCount++;
                 return new List<Account>() { sender, target, seller };
             }
@@ -185,7 +186,10 @@ namespace MicroCoin.Transactions
             if (transaction.Amount < 0) return false;
             if (transaction.Fee < 0) return false;
             var senderAccount = checkPointService.GetAccount(transaction.SignerAccount, true);
-            if(!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
+            var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
+            //if (senderAccount.AccountInfo.State != AccountState.Normal) return false;
+            if (senderAccount.AccountInfo.LockedUntilBlock > blockChain.BlockHeight) return false;
+            if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
             {
                 return false;
             }
@@ -197,13 +201,13 @@ namespace MicroCoin.Transactions
                 if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
                 if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
                 if (senderAccount.TransactionCount + 1 != transaction.TransactionCount) return false;
-                var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
                 if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
             }
             else if (transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
             {
                 if (transaction.SellerAccount == transaction.TargetAccount) return false;
                 if (transaction.SignerAccount == transaction.TargetAccount) return false;
+                if (targetAccount.AccountInfo.State != AccountState.Sale) return false;
             }
             return true;
         }

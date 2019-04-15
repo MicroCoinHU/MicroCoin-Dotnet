@@ -26,8 +26,8 @@ namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=C:\\Temp\\blockchain.db; Journal=false; Async=true");        
-        private readonly LiteDatabase trdb = new LiteDatabase("Filename=C:\\Temp\\transactions.db; Journal=false; Async=true");        
+        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");        
+        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false; Async=true");        
 
         public BlockChainLiteDbStorage()
         {

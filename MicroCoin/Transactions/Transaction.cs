@@ -108,5 +108,10 @@ namespace MicroCoin.Transactions
         }
 
         abstract public IList<Account> Apply(ICheckPointService checkPointService);
+
+        public Hash SHA()
+        {
+            return Utils.Sha256(GetHash());
+        }
     }
 }

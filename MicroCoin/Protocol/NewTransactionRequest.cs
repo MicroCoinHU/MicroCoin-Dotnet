@@ -31,7 +31,7 @@ namespace MicroCoin.Protocol
         public IList<ITransaction> Transactions { get; set; }
         public DateTime Created { get; set; } = DateTime.Now;
 
-        public NetOperationType NetOperation => NetOperationType.BlockHeader;
+        public NetOperationType NetOperation => NetOperationType.NewTransaction;
 
         public RequestType RequestType => RequestType.AutoSend;
 
@@ -110,9 +110,11 @@ namespace MicroCoin.Protocol
                         bw.Write(Created.Hour);
                         bw.Write(Created.Minute / 10);
                     }
-                    System.Security.Cryptography.SHA256Managed sha = new System.Security.Cryptography.SHA256Managed();
-                    ms.Position = 0;
-                    return sha.ComputeHash(ms);
+                    using (System.Security.Cryptography.SHA256Managed sha = new System.Security.Cryptography.SHA256Managed())
+                    {
+                        ms.Position = 0;
+                        return sha.ComputeHash(ms);
+                    }
                 }
             }
             finally

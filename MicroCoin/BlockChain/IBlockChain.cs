@@ -27,8 +27,8 @@ namespace MicroCoin.BlockChain
         int Count { get; }
 
         void AddBlock(Block block);
-        void AddBlocks(IEnumerable<Block> blocks);
-        Task AddBlocksAsync(IEnumerable<Block> blocks);
+        bool AddBlocks(IEnumerable<Block> blocks);
+        Task<bool> AddBlocksAsync(IEnumerable<Block> blocks);
         void DeleteBlocks(uint from);
         void Dispose();
         Block GetBlock(uint blockNumber);
