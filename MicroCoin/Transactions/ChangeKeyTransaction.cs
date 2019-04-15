@@ -51,7 +51,7 @@ namespace MicroCoin.Transactions
                 {
                     bw.Write(TargetAccount);
                 }
-                bw.Write(NumberOfOperations);
+                bw.Write(TransactionCount);
                 bw.Write(Fee);
                 Payload.SaveToStream(bw);
                 AccountKey.SaveToStream(s, false);
@@ -75,7 +75,7 @@ namespace MicroCoin.Transactions
                         break;
                 }
 
-                NumberOfOperations = br.ReadUInt32();
+                TransactionCount = br.ReadUInt32();
                 Fee = br.ReadUInt64();
                 Payload = ByteString.ReadFromStream(br);
                 AccountKey = new ECKeyPair();
@@ -98,7 +98,7 @@ namespace MicroCoin.Transactions
                         bw.Write(TargetAccount);
                     }
 
-                    bw.Write(NumberOfOperations);
+                    bw.Write(TransactionCount);
                     bw.Write(Fee);
                     if (Payload != "")
                     {
@@ -137,7 +137,7 @@ namespace MicroCoin.Transactions
             account.AccountInfo.AccountKey = NewAccountKey;
             var signer = checkPointService.GetAccount(SignerAccount);
             signer.Balance -= Fee;
-            signer.NumberOfOperations++;
+            signer.TransactionCount++;
             return new List<Account> { account, signer };
         }
     }

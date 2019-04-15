@@ -32,5 +32,6 @@ namespace MicroCoin.BlockChain
         void DeleteBlocks(uint from);
         void Dispose();
         Block GetBlock(uint blockNumber);
+        IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock);
     }
 }

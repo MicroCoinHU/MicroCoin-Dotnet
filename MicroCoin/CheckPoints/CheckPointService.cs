@@ -28,6 +28,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace MicroCoin.CheckPoints
 {
@@ -96,7 +97,7 @@ namespace MicroCoin.CheckPoints
                     {
                         AccountNumber = i,
                         BlockNumber = block.Id,
-                        NumberOfOperations = 0,
+                        TransactionCount = 0,
                         UpdatedBlock = block.Id,
                         Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
                     };
@@ -143,7 +144,7 @@ namespace MicroCoin.CheckPoints
                         }
                         else
                         {
-                            GetAccount(item.SignerAccount).NumberOfOperations += 1;
+                            GetAccount(item.SignerAccount).TransactionCount += 1;
                             logger.LogWarning("No validator found for transaction type {0}", item.GetType());
                         }
                     }
@@ -155,9 +156,14 @@ namespace MicroCoin.CheckPoints
                         {
                             speed = block.Transactions.Count / (st.Elapsed.TotalSeconds);
                         }
-                        logger.LogInformation("Processed {0} transactions in {1}, Speed {2} T/s", block.Transactions.Count, st.Elapsed.TotalSeconds, speed);
+                        logger.LogInformation("#{0} block {1} transactions in {2}, Speed {3} Tx/s",
+                            block.Id,
+                            block.Transactions.Count,
+                            st.Elapsed.TotalSeconds, 
+                            speed);
                     }
                 }
+                logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
                 modifiedBlocks.Add(checkPointBlock);
                 if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                 {

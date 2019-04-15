@@ -26,15 +26,19 @@ namespace MicroCoin.Protocol
 {
     public class BlockResponse : IStreamSerializable, INetworkPayload
     {
-        public List<Block> Blocks { get; set; }
-        public uint TransactionCount { get; set; }
+        public ICollection<Block> Blocks { get; set; }
 
-        public NetOperationType NetOperation => NetOperationType.Blocks;
+        public virtual NetOperationType NetOperation => NetOperationType.Blocks;
 
         public RequestType RequestType => RequestType.Response;
 
         public BlockResponse()
         {
+        }
+
+        public BlockResponse(IEnumerable<Block> blocks) : this()
+        {
+            Blocks = new List<Block>(blocks);
         }
 
         public void SaveToStream(Stream stream)
@@ -51,7 +55,7 @@ namespace MicroCoin.Protocol
 
         public void LoadFromStream(Stream stream)
         {
-            Blocks = new List<Block>();
+            Blocks = new HashSet<Block>();
             using (BinaryReader br = new BinaryReader(stream, Encoding.ASCII, true))
             {
                 uint BlockCount = br.ReadUInt32();

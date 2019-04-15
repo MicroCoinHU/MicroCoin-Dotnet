@@ -35,7 +35,7 @@ namespace MicroCoin.Chain
         public Currency Balance { get; set; }
         public decimal VisibleBalance => Balance;
         public uint UpdatedByBlock { get; set; }
-        public uint NumberOfOperations { get; set; }
+        public uint TransactionCount { get; set; }
         public ByteString Name { get; set; }
         public string NameAsString
         {
@@ -89,7 +89,7 @@ namespace MicroCoin.Chain
             AccountInfo.SaveToStream(bw, writeLengths);
             bw.Write(Balance);
             bw.Write(UpdatedBlock);
-            bw.Write(NumberOfOperations);
+            bw.Write(TransactionCount);
             if (proto2)
             {
                 Name.SaveToStream(bw, writeLengths);
@@ -106,7 +106,7 @@ namespace MicroCoin.Chain
                 AccountInfo = AccountInfo.CreateFromStream(br);
                 Balance = br.ReadUInt64();
                 UpdatedBlock = br.ReadUInt32();
-                NumberOfOperations = br.ReadUInt32();
+                TransactionCount = br.ReadUInt32();
                 Name = ByteString.ReadFromStream(br);
                 AccountType = br.ReadUInt16();
                 UpdatedByBlock = br.ReadUInt32();
@@ -120,7 +120,7 @@ namespace MicroCoin.Chain
             if (other.AccountType != AccountType) return false;
             if (other.Balance != Balance) return false;
             if (other.Name != Name) return false;
-            if (other.NumberOfOperations != NumberOfOperations) return false;
+            if (other.TransactionCount != TransactionCount) return false;
             if (other.UpdatedBlock != UpdatedBlock) return false;
             return other.AccountInfo.Equals(AccountInfo);            
         }

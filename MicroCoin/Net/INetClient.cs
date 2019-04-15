@@ -26,7 +26,7 @@ namespace MicroCoin.Net
         bool IsConnected { get; }
         bool Started { get; set; }
         bool Connect(Node node, int timeout = 500);
-        void Send(NetworkPacket packet);
+        void Send(NetworkPacket packet, uint requestId = 0);
         Task<NetworkPacket> SendAndWaitAsync(NetworkPacket packet);
         void Start();
     }

@@ -24,23 +24,32 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using MicroCoin.BlockChain;
 using System.Linq;
+using System.Collections.Concurrent;
 
 namespace MicroCoin.Handlers
 {
     public class BlocksHandler : IHandler<BlockRequest>, IHandler<BlockResponse>, IHandler<NewBlockRequest>
     {
         private readonly IBlockChain blockChain;
-        public BlocksHandler(IBlockChain blockChain)
+        private readonly object handlerLock = new object();
+        private readonly ConcurrentBag<uint> processedBlocks = new ConcurrentBag<uint>();
+        private readonly ConcurrentBag<Block> newBlocks = new ConcurrentBag<Block>();
+        private readonly IPeerManager peerManager;
+        public BlocksHandler(IBlockChain blockChain, IPeerManager peerManager)
         {
             this.blockChain = blockChain;
+            this.peerManager = peerManager;
         }
 
         public void HandleResponse(NetworkPacket packet)
         {
             var blocks = packet.Payload<BlockResponse>().Blocks;
             if (blocks.Count == 0) return;
-            blockChain.AddBlocks(blocks);
-            
+            if (blocks.All(p => p.Header.BlockSignature == 2))
+            {
+                blockChain.AddBlocks(blocks);
+                newBlocks.Clear();
+            }
             if (blocks.Last().Id < packet.Node.BlockHeight)
             {
                 NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
@@ -58,6 +67,18 @@ namespace MicroCoin.Handlers
         public void HandleNewBlock(NetworkPacket packet)
         {
             var block = packet.Payload<NewBlockRequest>().Block;
+            if (!processedBlocks.Contains(block.Id))
+            {
+                processedBlocks.Add(block.Id);
+                newBlocks.Add(block);
+                foreach (var peer in peerManager.GetNodes().Where(p => p.Connected))
+                {
+                    if (!peer.EndPoint.Equals(packet.Node.EndPoint))
+                    {
+                        peer.NetClient.Send(new NetworkPacket<NewBlockRequest>(new NewBlockRequest(block)));
+                    }
+                }
+            }
             if (block.Header.BlockNumber > blockChain.BlockHeight)
             {
                 NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
@@ -74,15 +95,72 @@ namespace MicroCoin.Handlers
 
         public void Handle(NetworkPacket packet)
         {
-            if (packet.Header.Operation == NetOperationType.NewBlock) HandleNewBlock(packet);
-            if(packet.Header.Operation == NetOperationType.Blocks)
+            lock (handlerLock)
             {
-                switch (packet.Header.RequestType)
+                if (packet.Header.Operation == NetOperationType.NewBlock)
                 {
-                    case RequestType.Request: return;
-                    case RequestType.Response: HandleResponse(packet); break;
-                    default: return;
+                    HandleNewBlock(packet);
                 }
+                if (packet.Header.Operation == NetOperationType.Blocks)
+                {
+                    switch (packet.Header.RequestType)
+                    {
+                        case RequestType.Request: HandleRequest(packet); break;
+                        case RequestType.Response: HandleResponse(packet); break;
+                        default: return;
+                    }
+                }
+                if (packet.Header.Operation == NetOperationType.BlockHeader)
+                {
+                    switch (packet.Header.RequestType)
+                    {
+                        case RequestType.Request: HandleBlockHeaderRequest(packet); break;
+                        case RequestType.Response: HandleResponse(packet); break;
+                        default: return;
+                    }
+                }
+            }
+        }
+
+        private void HandleRequest(NetworkPacket packet)
+        {
+            var request = packet.Payload<BlockRequest>();
+            if (request.StartBlock <= 1262 && 1262 <= request.EndBlock)
+            {
+                Console.WriteLine("Block");
+            }
+            var blocks = blockChain.GetBlocks(request.StartBlock, request.EndBlock);
+            if (blocks.Count() == request.EndBlock - request.StartBlock + 1)
+            {
+                packet.Node.NetClient.Send(new NetworkPacket<BlockResponse>(new BlockResponse(blocks)), packet.Header.RequestId);
+            }
+        }
+
+        private void HandleBlockHeaderRequest(NetworkPacket packet)
+        {
+            var request = packet.Payload<BlockHeaderRequest>();
+            var response = new BlockHeaderResponse
+            {
+                Blocks = new HashSet<Block>()
+            };
+            for (uint i = request.StartBlock; i <= request.EndBlock; i++)
+            {
+                if (newBlocks.Any(p => p.Id == i))
+                {
+                    response.Blocks.Add(newBlocks.First(p => p.Id == i));
+                }
+                else
+                {
+                    var block = blockChain.GetBlock(i);
+                    if (block != null)
+                    {
+                        response.Blocks.Add(block);
+                    }
+                }
+            }
+            if (response.Blocks.Count > 0)
+            {
+                packet.Node.NetClient.Send(new NetworkPacket<BlockHeaderResponse>(response), packet.Header.RequestId);
             }
         }
     }

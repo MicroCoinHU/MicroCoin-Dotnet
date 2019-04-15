@@ -50,7 +50,7 @@ namespace MicroCoin.Transactions
         {
             var bytes = new List<byte>(200);
             bytes.AddRange(BitConverter.GetBytes(SignerAccount));
-            bytes.AddRange(BitConverter.GetBytes(NumberOfOperations));
+            bytes.AddRange(BitConverter.GetBytes(TransactionCount));
             bytes.AddRange(BitConverter.GetBytes(TargetAccount));
             bytes.AddRange(BitConverter.GetBytes(Amount));
             bytes.AddRange(BitConverter.GetBytes(Fee));
@@ -81,45 +81,6 @@ namespace MicroCoin.Transactions
                 }
             }
             return bytes.ToArray();
-
-            MemoryStream ms = new MemoryStream();
-            try
-            {
-                using (BinaryWriter bw = new BinaryWriter(ms))
-                {
-                    bw.Write(SignerAccount);
-                    bw.Write(NumberOfOperations);
-                    bw.Write(TargetAccount);
-                    bw.Write(Amount);
-                    bw.Write(Fee);
-                    if (Payload.Length > 0) bw.Write((byte[])Payload);
-                    bw.Write((ushort)AccountKey.CurveType);
-                    if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
-                    {
-                        bw.Write(AccountKey.PublicKey.X);
-                        bw.Write(AccountKey.PublicKey.Y);
-                    }
-                    if(TransactionStyle == TransferType.BuyAccount)
-                    {
-                        bw.Write(AccountPrice);
-                        bw.Write(SellerAccount);
-                        bw.Write((ushort)NewAccountKey.CurveType);
-                        if(NewAccountKey?.PublicKey.X != null && NewAccountKey.PublicKey.X.Length > 0 && NewAccountKey.PublicKey.Y.Length > 0)
-                        {
-                            bw.Write(NewAccountKey.PublicKey.X);
-                            bw.Write(NewAccountKey.PublicKey.Y);
-                        }
-                    }
-                    ms.Position = 0;
-                    byte[] b = ms.ToArray();
-                    ms = null;
-                    return b;
-                }
-            }
-            finally
-            {
-                ms?.Dispose();
-            }
         }
 
         public override void SaveToStream(Stream s)
@@ -127,7 +88,7 @@ namespace MicroCoin.Transactions
             using (BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true))
             {
                 bw.Write((uint)SignerAccount);
-                bw.Write(NumberOfOperations);
+                bw.Write(TransactionCount);
                 bw.Write((uint)TargetAccount);
                 bw.Write(Amount);
                 bw.Write(Fee);
@@ -148,7 +109,7 @@ namespace MicroCoin.Transactions
             using (BinaryReader br = new BinaryReader(stream, Encoding.ASCII, true))
             {
                 SignerAccount = br.ReadUInt32();
-                NumberOfOperations = br.ReadUInt32();
+                TransactionCount = br.ReadUInt32();
                 TargetAccount = br.ReadUInt32();
                 Amount = br.ReadUInt64();
                 Fee = br.ReadUInt64();
@@ -172,7 +133,6 @@ namespace MicroCoin.Transactions
                     }
                 }
                 Signature = new ECSignature(stream);
-
             }
         }
 
@@ -194,7 +154,7 @@ namespace MicroCoin.Transactions
                 sender.Balance -= Amount;
                 sender.Balance -= Fee;
                 target.Balance += Amount;
-                sender.NumberOfOperations++;
+                sender.TransactionCount++;
                 return new List<Account> { sender, target };
             }
             if(TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
@@ -203,7 +163,7 @@ namespace MicroCoin.Transactions
                 sender.Balance -= Amount;
                 sender.Balance -= Fee;
                 target.AccountInfo.AccountKey = NewAccountKey;
-                sender.NumberOfOperations++;
+                sender.TransactionCount++;
                 return new List<Account>() { sender, target, seller };
             }
             return new List<Account>();
@@ -236,7 +196,7 @@ namespace MicroCoin.Transactions
                 var blockHeight = blockChain.BlockHeight;
                 if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
                 if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
-                if (senderAccount.NumberOfOperations + 1 != transaction.NumberOfOperations) return false;
+                if (senderAccount.TransactionCount + 1 != transaction.TransactionCount) return false;
                 var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
                 if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
             }

@@ -33,7 +33,7 @@ namespace MicroCoin.Transactions
 
         private ByteString _payload;
         public AccountNumber SignerAccount { get; set; }
-        public uint NumberOfOperations { get; set; }
+        public uint TransactionCount { get; set; }
         public AccountNumber TargetAccount { get; set; }
         public ByteString Payload
         {
@@ -78,7 +78,7 @@ namespace MicroCoin.Transactions
                 {
                     bw.Write(block);
                     bw.Write(SignerAccount);
-                    bw.Write(NumberOfOperations);
+                    bw.Write(TransactionCount);
                     Hash data;
                     using (MemoryStream m = new MemoryStream())
                     {

@@ -26,7 +26,6 @@ namespace MicroCoin.Protocol
     {
         public Block Block { get; set; }
         public NetOperationType NetOperation => NetOperationType.NewBlock;
-
         public RequestType RequestType => RequestType.AutoSend;
 
         public NewBlockRequest()

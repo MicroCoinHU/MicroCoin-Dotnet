@@ -37,6 +37,7 @@ using Microsoft.Extensions.Logging;
 using LogLevel = NLog.LogLevel;
 using MicroCoin.Transactions;
 using System.Diagnostics;
+using System.IO;
 
 namespace MicroCoin
 {
@@ -44,7 +45,6 @@ namespace MicroCoin
     {
         static async Task Main(string[] args)
         {
-            
             Console.WriteLine("Hello World!");
             var mapper = BsonMapper.Global;
             mapper.ResolveMember = (type, memberInfo, memberMapper) =>
@@ -104,8 +104,10 @@ namespace MicroCoin
 
             var config = new NLog.Config.LoggingConfiguration();
 
-            var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole");
-            logconsole.UseDefaultRowHighlightingRules = true;
+            var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole")
+            {
+                UseDefaultRowHighlightingRules = true
+            };
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
 
             LogManager.Configuration = config;
@@ -154,7 +156,10 @@ namespace MicroCoin
                 .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<BlockResponse>>().Handle,
                 ThreadOption.BackgroundThread,
                 false,
-                (p) => p.Header.Operation == NetOperationType.Blocks || p.Header.Operation == NetOperationType.NewBlock);
+                (p) => p.Header.Operation == NetOperationType.Blocks ||
+                       p.Header.Operation == NetOperationType.NewBlock ||
+                       p.Header.Operation == NetOperationType.BlockHeader
+                       );
 
             ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe(
                 ServiceLocator.ServiceProvider.GetService<IHandler<CheckPointResponse>>().Handle,
@@ -172,11 +177,56 @@ namespace MicroCoin
             {
                 throw new Exception("NO FIX SEEDS FOUND");
             }
-
+            var bc = ServiceLocator.GetService<IBlockChain>();
             var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
+#if debugrt || true
+            var block = bc.GetBlock(88359);           
+            var pow = block.Header.CalcProofOfWork();
+            Hash ophash = Utils.Sha256("");
+            foreach(var t in block.Transactions)
+            {
+                Hash hb = t.Serialize();
+                ophash = Utils.Sha256(ophash + Utils.Sha256(hb));
+            }
+            var ix = (uint)block.Header.Nonce;
+            block.Header.TransactionHash = ophash;
+            block.Header.Timestamp -= (uint)TimeSpan.FromHours(2).TotalSeconds;
+            Console.WriteLine(block.Header.CalcProofOfWork());
             foreach (var bestNode in bestNodes)
             {
-                var bc = ServiceLocator.GetService<IBlockChain>();
+                try
+                {
+                    var x = await bestNode.NetClient.SendAndWaitAsync(new NetworkPacket<BlockRequest>(new BlockRequest()
+                    {
+                        StartBlock = 88359,
+                        NumberOfBlocks = 1
+                    }));
+                    Console.WriteLine(x.Header.DataLength);
+                    var bs = x.Payload<BlockResponse>().Blocks;
+                    var b = bs.First(p => p.Id == 88359);
+                    using (FileStream f1 = File.Open("f1", System.IO.FileMode.OpenOrCreate))
+                    {
+                        b.SaveToStream(f1);
+                    }
+                    using (FileStream f1 = File.Open("f2", System.IO.FileMode.OpenOrCreate))
+                    {
+                        f1.Write(x.RawData, 4, x.RawData.Length-4);
+                    }
+
+                    for (int k = 0; k < block.Transactions.Count; k++)
+                    {
+                        var t1 = block.Transactions[k];
+                        var t2 = b.Transactions[k];
+                    }
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+#endif
+            foreach (var bestNode in bestNodes)
+            {
                 if (bestNode.BlockHeight > bc.BlockHeight)
                 {
                     var remoteBlock = bestNode.BlockHeight;
@@ -187,21 +237,31 @@ namespace MicroCoin
                             Message = new BlockRequest
                             {
                                 StartBlock = (uint)(bc.BlockHeight > 0 ? bc.BlockHeight + 1 : bc.BlockHeight),
-                                NumberOfBlocks = 5000
+                                NumberOfBlocks = 10000
                             }
                         };
+/*
+                        var p = blockRequest;
+                        p.Header.Operation = NetOperationType.Transactions;
+                        var ro = await bestNode.NetClient.SendAndWaitAsync(p);
+                        var x = ro.Payload<BlockResponse>();
+
+                        p.Header.Operation = NetOperationType.Blocks;
+                        ro = await bestNode.NetClient.SendAndWaitAsync(p);
+                        x = ro.Payload<BlockResponse>();
+*/
                         NetworkPacket response;
                         try
                         {
                             response = await bestNode.NetClient.SendAndWaitAsync(blockRequest);
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             break;
                         }
                         var blocks = response.Payload<BlockResponse>().Blocks;
                         var st = Stopwatch.StartNew();
-                        await bc.AddBlocksAsync(blocks);                        
+                        await bc.AddBlocksAsync(blocks);
                         st.Stop();
                         Console.WriteLine("Added {0} blocks with {2} transactions in {3}. New block height {1}", blocks.Count, bc.BlockHeight, blocks.Sum(p=>p.Transactions?.Count), st.Elapsed);
                     } while (remoteBlock > bc.BlockHeight);

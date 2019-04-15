@@ -32,5 +32,7 @@ namespace MicroCoin.BlockChain
         void DeleteBlocks(uint from);
         int BlockHeight { get; }
         int Count { get; }
+
+        IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock);
     }
 }

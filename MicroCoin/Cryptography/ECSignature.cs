@@ -37,29 +37,10 @@ namespace MicroCoin.Cryptography
             {
                 var len = br.ReadUInt16();
                 int offset = 0;
-                if (len == 31)
-                {
-                    R = new byte[len + 1];
-                    R[0] = 0;
-                    offset = 1;
-                }
-                else
-                {
-                    R = new byte[len];
-                }
-                br.Read(R, offset, len);                
+                R = new byte[len];
+                br.Read(R, offset, len);
                 len = br.ReadUInt16();
-                offset = 0;
-                if (len == 31)
-                {
-                    S = new byte[len + 1];
-                    S[0] = 0;
-                    offset = 1;
-                }
-                else
-                {
-                    S = new byte[len];
-                }
+                S = new byte[len];
                 br.Read(S, offset, len);
             }
         }
@@ -78,10 +59,12 @@ namespace MicroCoin.Cryptography
         {
             using (var bw = new BinaryWriter(stream, Encoding.ASCII, true))
             {
-                bw.Write((ushort) R.Length);
-                bw.Write(R);
-                bw.Write((ushort) S.Length);
-                bw.Write(S);
+                ushort rlen = (ushort) R.Length;
+                ushort slen = (ushort) S.Length;
+                bw.Write(rlen);
+                bw.Write(R, 0, rlen);
+                bw.Write(slen);
+                bw.Write(S, 0, slen);
             }
         }
     }

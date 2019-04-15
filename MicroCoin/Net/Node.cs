@@ -36,6 +36,8 @@ namespace MicroCoin.Net
         public bool Connected => NetClient == null ? false : NetClient.IsConnected;
         public ushort ServerPort { get; internal set; }
         public uint BlockHeight { get; set; } = 0;
+        public DateTime LastConnectionAttempt { get; set; } = DateTime.MinValue;
+        public int ConnectionAttemps { get; set; } = 0;
 
         public override string ToString()
         {

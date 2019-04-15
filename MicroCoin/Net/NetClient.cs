@@ -56,19 +56,20 @@ namespace MicroCoin.Net
             lock (clientLock)
             {
                 if (IsConnected) return IsConnected;
-                Node = node;
-                var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, null, null);
-                asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
-                try
+                Node = node;                
+                var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, (a) =>
                 {
-                    TcpClient.EndConnect(asyncResult);
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
+                    try
+                    {
+                        TcpClient.EndConnect(a);
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }, null);
+                bool connected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
                 Node.NetClient = this;
-                return IsConnected;
+                return connected;
             }
         }
         public void Start()
@@ -125,7 +126,8 @@ namespace MicroCoin.Net
                             }
                             if (header.RequestType != RequestType.Response || header.Operation != packet.Header.Operation || header.RequestId != packet.Header.RequestId)
                             {
-                                logger.LogWarning("Dropping package");
+                                logger.LogWarning("Dropping package {0} {1}", header.Operation, header
+                                    .RequestType);
                                 br.ReadBytes(header.DataLength); // Drop package
                                 continue;
                             }
@@ -141,7 +143,7 @@ namespace MicroCoin.Net
             }
         }
 
-        public void Send(NetworkPacket packet)
+        public void Send(NetworkPacket packet, uint requestId = 0)
         {
             lock (clientLock)
             {
@@ -150,6 +152,10 @@ namespace MicroCoin.Net
                     logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
                     using (var sendStream = new MemoryStream())
                     {
+                        if (requestId > 0)
+                        {
+                            packet.Header.RequestId = requestId;
+                        }
                         packet.Header.DataLength = packet.RawData.Length;
                         packet.Header.SaveToStream(sendStream);
                         sendStream.Write(packet.RawData, 0, packet.RawData.Length);
@@ -158,8 +164,9 @@ namespace MicroCoin.Net
                         TcpClient.GetStream().Flush();
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    logger.LogDebug(e, "Can't send packet to {0}", Node.EndPoint);
                     return;
                 }
             }
@@ -180,7 +187,7 @@ namespace MicroCoin.Net
                             {
                                 Magic = br.ReadUInt32()
                             };
-                            Node.LastConnection = DateTime.Now;
+                            Node.LastConnection = DateTime.UtcNow;
                             if (TcpClient.Available < PacketHeader.Size - sizeof(uint))
                             {
                                 break;
@@ -210,7 +217,7 @@ namespace MicroCoin.Net
                                     Node = Node,
                                     RawData = br.ReadBytes(header.DataLength)
                                 };
-                                logger.LogInformation("Received network packet {0} {1} - {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint);
+                                logger.LogInformation("Received network packet {0} {1} - {2} @ {3}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint, TcpClient.Client.LocalEndPoint);
                                 eventAggregator.GetEvent<NetworkEvent>().Publish(packet);
                             }
                         }

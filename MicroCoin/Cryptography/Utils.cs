@@ -82,7 +82,7 @@ namespace MicroCoin.Cryptography
             if (keyPair.CurveType != ECCurveType.Sect283K1)
             {
                 try
-                {                   
+                {
                     using (var ecdsa = ECDsa.Create(keyPair))
                     {                        
                         while (signature.S.Length * 8 < ecdsa.KeySize)
@@ -100,7 +100,7 @@ namespace MicroCoin.Cryptography
                         return ecdsa.VerifyHash(data, signature.Signature);
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                 }
             }

@@ -31,7 +31,7 @@ namespace MicroCoin.Net
         {
             lock (lobj)
             {
-                if(!peers.Any(p=>p.IP == node.IP && p.Port == node.Port && p.ServerPort == node.ServerPort))
+                if(!peers.Any(p=>(p.IP == node.IP) && (p.Port == node.Port)))
                 {
                     peers.Add(node);
                 }

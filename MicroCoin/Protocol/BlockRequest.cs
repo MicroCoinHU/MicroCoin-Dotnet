@@ -28,7 +28,7 @@ namespace MicroCoin.Protocol
         public uint EndBlock { get; set; }
         public uint NumberOfBlocks { get; set; }
 
-        public NetOperationType NetOperation => NetOperationType.Blocks;
+        public virtual NetOperationType NetOperation => NetOperationType.Blocks;
 
         public RequestType RequestType => RequestType.Request;
 

@@ -26,13 +26,13 @@ namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");        
-        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false; Async=true");        
+        private readonly LiteDatabase db = new LiteDatabase("Filename=C:\\Temp\\blockchain.db; Journal=false; Async=true");        
+        private readonly LiteDatabase trdb = new LiteDatabase("Filename=C:\\Temp\\transactions.db; Journal=false; Async=true");        
 
         public BlockChainLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
-            mapper.Entity<ITransaction>().Id(p => p._id).Ignore(p => p.AccountKey);
+            mapper.Entity<ITransaction>().Id(p => p._id);
 #if DEBUG
             mapper.Entity<ITransaction>()
                 .Field(p => p.Block, "a")
@@ -44,7 +44,6 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "g");
 
             mapper.Entity<ChangeKeyTransaction>()
-                .Ignore(p => p.AccountKey)
                 .Field(p => p.Block, "a")
                 .Field(p => p.Fee, "b")
                 .Field(p => p.Payload, "c")
@@ -54,10 +53,10 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "g")
                 .Field(p => p.Amount, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.NumberOfOperations, "j")                
+                .Field(p => p.TransactionCount, "j")                
                 ;
                 
-            mapper.Entity<ListAccountTransaction>().Ignore(p => p.AccountKey)
+            mapper.Entity<ListAccountTransaction>()
                 .Field(p => p.Block, "a")
                 .Field(p => p.Fee, "b")
                 .Field(p => p.Payload, "c")
@@ -67,14 +66,13 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "g")
                 .Field(p => p.Amount, "h")
                 .Field(p => p.NewPublicKey, "i")
-                .Field(p => p.NumberOfOperations, "j")
+                .Field(p => p.TransactionCount, "j")
                 .Field(p=>p.AccountPrice,"k")
                 .Field(p=>p.AccountToPay, "l")
                 .Field(p=>p.LockedUntilBlock, "m")                
                 ;
 
             mapper.Entity<TransferTransaction>()
-                .Ignore(p => p.AccountKey)
                 .Field(p => p.Block, "a")
                 .Field(p => p.Fee, "b")
                 .Field(p => p.Payload, "c")
@@ -84,13 +82,13 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "g")
                 .Field(p => p.Amount, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.NumberOfOperations, "j")
+                .Field(p => p.TransactionCount, "j")
                 .Field(p => p.AccountPrice, "k")
                 .Field(p => p.TransactionStyle, "l")
                 .Field(p => p.SellerAccount, "m")
                 ;
 
-            mapper.Entity<ChangeAccountInfoTransaction>().Ignore(p => p.AccountKey)
+            mapper.Entity<ChangeAccountInfoTransaction>()
                 .Field(p => p.Block, "a")
                 .Field(p => p.Fee, "b")
                 .Field(p => p.Payload, "c")
@@ -100,7 +98,7 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionType, "g")
                 .Field(p => p.Amount, "h")
                 .Field(p => p.NewAccountKey, "i")
-                .Field(p => p.NumberOfOperations, "j")
+                .Field(p => p.TransactionCount, "j")
                 .Field(p => p.NewName, "k")
                 .Field(p => p.NewType, "l");
 #endif
@@ -167,6 +165,23 @@ namespace MicroCoin.BlockChain
                 Transactions = tt.Result
             };
             return block;
+        }
+
+        public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
+        {
+            var blockHeaders = db.GetCollection<BlockHeader>().Find(p => p.Id >= startBlock && p.Id <= endBlock);
+            var transactions = trdb.GetCollection<ITransaction>().Find(p => p.Block >= startBlock && p.Block <= endBlock);
+            var blocks = new HashSet<Block>();
+            foreach(BlockHeader header in blockHeaders)
+            {
+                var block = new Block
+                {
+                    Header = header,
+                    Transactions = transactions.Where(p => p.Block == header.Id).ToList()
+                };
+                blocks.Add(block);
+            }
+            return blocks;
         }
     }
 }

@@ -28,9 +28,10 @@ namespace MicroCoin.Types
         {
             _unixTimestamp = unixTimestamp;
         }
+
         public static implicit operator Timestamp(DateTime dt)
-        {
-            return new Timestamp((uint)dt.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
+        {            
+            return new Timestamp((uint)dt.ToUniversalTime().Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds);
         }
 
         public static implicit operator DateTime(Timestamp t)

@@ -29,10 +29,10 @@ namespace MicroCoin.Protocol
         Hello = 1,
         Error = 2,
         Message = 3,
-        Transactions = 0x05,
+        BlockHeader = 0x05,
         Blocks = 0x10,
         NewBlock = 0x11,
-        AddOperations = 0x20,
+        AddTransaction = 0x20,
         CheckPoint = 0x21
     }
 

@@ -63,7 +63,7 @@ namespace MicroCoin.Net
         {
             HelloRequest request = HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>());
             NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
-            logger.LogTrace("Discoverfixed");
+            logger.LogTrace("Discovering fixed servers");
             foreach (var server in Params.FixedSeedServers)
             {
                 var node = new Node
@@ -79,7 +79,7 @@ namespace MicroCoin.Net
                 {
                     try
                     {
-                        logger.LogTrace("Send hello");
+                        logger.LogTrace("Sending hello to {0}", node.EndPoint);
                         var hello = await cl.SendAndWaitAsync(networkPacket);
                         node.BlockHeight = hello.Payload<HelloResponse>().Block.Header.BlockNumber;
                         peerManager.AddNew(node);
@@ -87,7 +87,7 @@ namespace MicroCoin.Net
                     }
                     catch (Exception e)
                     {
-                        logger.LogWarning("{0} dead", server.Address);
+                        logger.LogWarning("{0} dead ({1})", server.Address, e.Message);
                         cl.Dispose();
                     }
                 }
@@ -97,7 +97,7 @@ namespace MicroCoin.Net
                     cl.Dispose();
                 }
             }
-            logger.LogTrace("Fixed ended");
+            logger.LogTrace("All fixed servers discovered");
             return peerManager.GetNodes().Count() > 0;
         }
 
@@ -119,35 +119,44 @@ namespace MicroCoin.Net
                         }
                     }
                     var rand = new Random();
-                    var needHello = peerManager.GetNodes().Where(p => p.Connected && p.LastConnection < DateTime.Now.Subtract(new TimeSpan(0, 0, 30 + rand.Next(30))));
+                    var needHello = peerManager.GetNodes().Where(p => p.Connected && p.LastConnection < DateTime.Now.Subtract(new TimeSpan(0, 0, 45 + rand.Next(30))));
                     foreach (var node in needHello)
                     {
                         if (!node.NetClient.Started) node.NetClient.Start();
+                        HelloRequest request = HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>());
+                        NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
+                        node.NetClient.Send(networkPacket);
                     }
-                    var nodesToConnect = peerManager.GetNodes().Where(p => p.Connected == false);
+                    var nodesToConnect = peerManager.GetNodes().Where(p => p.Connected == false && p.LastConnectionAttempt < DateTime.Now.Subtract(TimeSpan.FromSeconds(300)));
                     foreach (var elem in nodesToConnect)
                     {
                         logger.LogDebug("Discovering peer: {0}", elem.EndPoint);
+                        elem.LastConnectionAttempt = DateTime.Now;
                         var client = ServiceLocator.GetService<INetClient>();
                         client.Connect(elem);
                         if (elem.NetClient != null && elem.NetClient.IsConnected)
                         {
                             elem.NetClient.Start();
+                            elem.ConnectionAttemps = 0;
                             logger.LogInformation("Peer {0} alive", elem.EndPoint);
                         }
                         else
                         {
                             logger.LogWarning("Peer {0} died", elem.EndPoint);
+                            elem.ConnectionAttemps += 1;
                             elem.NetClient?.Dispose();
                             elem.NetClient = null;
-                            peerManager.Remove(elem);
                         }
+                    }                   
+                    foreach(var peer in peerManager.GetNodes().Where(p => p.ConnectionAttemps >= 6).ToList())
+                    {
+                        peerManager.Remove(peer);
                     }
-                    logger.LogInformation("We have total {0} peers. {1} alive and {2} died.", peerManager.GetNodes().Count(), peerManager.GetNodes().Count(p=>p.Connected), peerManager.GetNodes().Count(p => !p.Connected));
-                    Thread.Sleep(1000);
+                    logger.LogInformation("Now have total {0} peers. {1} alive and {2} died.", peerManager.GetNodes().Count(), peerManager.GetNodes().Count(p=>p.Connected), peerManager.GetNodes().Count(p => !p.Connected));
+                    Thread.Sleep(10000);
                 }
             }
-            catch (ThreadInterruptedException e)
+            catch (ThreadInterruptedException)
             {
                 return;
             }

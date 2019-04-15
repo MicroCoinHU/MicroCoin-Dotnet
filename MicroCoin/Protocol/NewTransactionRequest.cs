@@ -31,7 +31,7 @@ namespace MicroCoin.Protocol
         public IList<ITransaction> Transactions { get; set; }
         public DateTime Created { get; set; } = DateTime.Now;
 
-        public NetOperationType NetOperation => NetOperationType.Transactions;
+        public NetOperationType NetOperation => NetOperationType.BlockHeader;
 
         public RequestType RequestType => RequestType.AutoSend;
 

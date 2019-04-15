@@ -60,7 +60,7 @@ namespace MicroCoin.Transactions
                 bw.Write(SignerAccount);
                 bw.Write(TargetAccount);
                 bw.Write((ushort) TransactionType);
-                bw.Write(NumberOfOperations);
+                bw.Write(TransactionCount);
                 if (TransactionType == TransactionType.ListAccountForSale)
                 {
                     bw.Write(AccountPrice);
@@ -91,7 +91,7 @@ namespace MicroCoin.Transactions
                 SignerAccount = br.ReadUInt32();
                 TargetAccount = br.ReadUInt32();
                 TransactionType = (TransactionType) br.ReadUInt16();
-                NumberOfOperations = br.ReadUInt32();
+                TransactionCount = br.ReadUInt32();
                 if (TransactionType == TransactionType.ListAccountForSale)
                 {
                     AccountPrice = br.ReadUInt64();
@@ -117,7 +117,7 @@ namespace MicroCoin.Transactions
                 {
                     bw.Write(SignerAccount);
                     bw.Write(TargetAccount);
-                    bw.Write(NumberOfOperations);
+                    bw.Write(TransactionCount);
                     bw.Write(AccountPrice);
                     bw.Write(AccountToPay);
                     bw.Write(Fee);

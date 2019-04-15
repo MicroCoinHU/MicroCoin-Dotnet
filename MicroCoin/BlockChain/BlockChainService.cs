@@ -21,9 +21,11 @@ using MicroCoin.Transactions;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
@@ -35,7 +37,7 @@ namespace MicroCoin.BlockChain
         private readonly IBlockChainStorage blockChainStorage;
         private readonly IEventAggregator eventAggregator;
         private readonly ILogger<BlockChainService> logger;
-        private readonly List<Block> blockCache = new List<Block>();
+        private readonly ConcurrentBag<Block> blockCache = new ConcurrentBag<Block>();
 
         public int BlockHeight
         {
@@ -76,10 +78,6 @@ namespace MicroCoin.BlockChain
             }
         }
 
-        public void RemoveBlocks(uint from)
-        {
-            
-        }
 
         protected void ProcessBlocks(IEnumerable<Block> blocks)
         {
@@ -104,7 +102,7 @@ namespace MicroCoin.BlockChain
                 if(block.Id <= BlockHeight)
                 {
                     var myBlock = GetBlock(block.Id);
-                    if(myBlock.Header.CompactTarget >= block.Header.CompactTarget)
+                    if (myBlock != null && myBlock.Header.CompactTarget >= block.Header.CompactTarget)
                     {
                         continue; // My chain is "longer" or equal, so block is invalid for me, or already included in the chain
                     }
@@ -160,6 +158,11 @@ namespace MicroCoin.BlockChain
         public void DeleteBlocks(uint from)
         {
             blockChainStorage.DeleteBlocks(from);
+        }
+
+        public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
+        {
+            return blockChainStorage.GetBlocks(startBlock, endBlock);
         }
     }
 }
