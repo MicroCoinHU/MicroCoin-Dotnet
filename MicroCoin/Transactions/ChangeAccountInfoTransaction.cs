@@ -117,7 +117,7 @@ namespace MicroCoin.Transactions
             {
                 target.Name = NewName;
             }
-            if ((ChangeType & (byte)AccountInfoChangeType.AccountType) > 0)
+            if ((ChangeType & 4) > 0)
             {
                 target.AccountType = NewType;
             }
