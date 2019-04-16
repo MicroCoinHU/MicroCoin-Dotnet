@@ -104,14 +104,13 @@ namespace MicroCoin.CheckPoints
             LoadFromStream(stream);
         }
 
-        public Hash CalculateBlockHash(bool checkproto = false)
+        public Hash CalculateBlockHash()
         {
             MemoryStream ms = new MemoryStream();
             try
             {
                 using (BinaryWriter bw = new BinaryWriter(ms, Encoding.ASCII, true))
                 {
-                    //SaveToStream(bw, false, checkproto ? ProtocolVersion<2 : false);
                     SaveToStream(bw, false, false);
                     ms.Position = 0;                    
                     using (SHA256Managed sha = new SHA256Managed())

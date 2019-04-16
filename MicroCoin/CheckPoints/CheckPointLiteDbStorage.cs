@@ -23,6 +23,7 @@ using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace MicroCoin.CheckPoints
 {
@@ -30,8 +31,8 @@ namespace MicroCoin.CheckPoints
     {
         private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
         private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
-        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
-
+        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");       
+        //string.Join("", checkpointdb.GetCollection<CheckPointBlock>().FindAll().Select(p => p.BlockHash).ToArray());
         public CheckPointLiteDbStorage()
         {
             var mapper = BsonMapper.Global;
@@ -67,6 +68,27 @@ namespace MicroCoin.CheckPoints
                 .Ignore(p => p.VisiblePrice);
         }
 
+        public CheckPointBlock LastBlock
+        {
+            get {
+                var id = checkpointdb.GetCollection<CheckPointBlock>().Max(p => p.Id).AsInt64;
+                var block = checkpointdb.GetCollection<CheckPointBlock>().FindById(id);
+                if (block == null) return null;
+                for (int i = (int)id * 5; i < (id + 1) * 5; i++) {
+                    block.Accounts.Add(accountdb.GetCollection<Account>().FindById(id));
+                }
+                return block;
+            }
+        }
+
+        public Hash CheckPointHash
+        {
+            get
+            {
+                return string.Join("", checkpointdb.GetCollection<CheckPointBlock>().FindAll().Select(p => p.BlockHash).ToArray());
+            }
+        }
+
         public void AddAccounts(IList<Account> modifiedAccounts)
         {
             accountdb.GetCollection<Account>().Upsert(modifiedAccounts);
@@ -92,7 +114,7 @@ namespace MicroCoin.CheckPoints
         }
 
         public Account GetAccount(AccountNumber accountNumber)
-        {
+        {                        
             return accountdb.GetCollection<Account>().FindById((int)accountNumber);
         }
 

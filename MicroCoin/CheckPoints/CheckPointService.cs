@@ -42,6 +42,7 @@ namespace MicroCoin.CheckPoints
 
     public class CheckPointService : ICheckPointService
     {
+
         private readonly ICheckPointStorage checkPointStorage;
         private readonly IBlockChain blockChain;
         private readonly ILogger<CheckPointService> logger;
@@ -53,6 +54,7 @@ namespace MicroCoin.CheckPoints
         private readonly IList<string> pendingTransactions = new List<string>();
         private readonly object checkPointLock = new object();
         private ulong accountWork = 0;
+
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator, IBlockChain blockChain, ILogger<CheckPointService> logger)
         {
             this.checkPointStorage = checkPointStorage;
@@ -145,6 +147,7 @@ namespace MicroCoin.CheckPoints
                 logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
                 accountWork += block.Header.CompactTarget;
                 checkPointBlock.AccumulatedWork = accountWork;
+                checkPointBlock.BlockHash = checkPointBlock.CalculateBlockHash();
                 modifiedBlocks.Add(checkPointBlock);                
                 if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                 {
@@ -230,6 +233,11 @@ namespace MicroCoin.CheckPoints
 
         public void LoadFromBlockChain()
         {
+            var lastBlock = checkPointStorage.LastBlock;
+            if (lastBlock != null)
+            {
+                accountWork = lastBlock.AccumulatedWork;
+            }
             var start = (blockChain.BlockHeight / 100) * 100;
             for (uint i = (uint)start; i <= blockChain.BlockHeight; i++)
             {
