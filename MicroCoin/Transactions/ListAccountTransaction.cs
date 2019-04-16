@@ -153,12 +153,20 @@ namespace MicroCoin.Transactions
             var target = checkPointService.GetAccount(TargetAccount);
             var signer = checkPointService.GetAccount(SignerAccount);
             target.AccountInfo.State = TransactionType == TransactionType.ListAccountForSale ? AccountState.Sale : AccountState.Normal;
-            if(NewPublicKey!=null && NewPublicKey.CurveType != ECCurveType.Empty)
+            if (TransactionType == TransactionType.DeListAccountForSale)
+            {
+                target.AccountInfo.NewPublicKey = new ECKeyPair();
+                target.AccountInfo.AccountToPayPrice = 0;
+                target.AccountInfo.Price = 0;
+                target.AccountInfo.LockedUntilBlock = 0;
+            }
+            else
             {
                 target.AccountInfo.NewPublicKey = NewPublicKey;
+                target.AccountInfo.AccountToPayPrice = AccountToPay;
+                target.AccountInfo.Price = AccountPrice;
+                target.AccountInfo.LockedUntilBlock = LockedUntilBlock;
             }
-            target.AccountInfo.AccountToPayPrice = AccountToPay;
-            target.AccountInfo.Price = AccountPrice;
             signer.TransactionCount++;
             signer.Balance -= Fee;
             return new List<Account> { signer, target };
