@@ -97,13 +97,13 @@ namespace MicroCoin.CheckPoints
         public void AddBlock(CheckPointBlock block)
         {
             accountdb.GetCollection<Account>().Upsert(block.Accounts);
-            checkpointdb.GetCollection<CheckPointBlock>().Insert(block);
+            checkpointdb.GetCollection<CheckPointBlock>().Upsert(block);
         }
 
         public void AddBlocks(IEnumerable<CheckPointBlock> blocks)
         {
             accountdb.GetCollection<Account>().Upsert(blocks.SelectMany(p => p.Accounts));
-            checkpointdb.GetCollection<CheckPointBlock>().InsertBulk(blocks);
+            checkpointdb.GetCollection<CheckPointBlock>().Upsert(blocks);
         }
 
         public void Dispose()
@@ -130,6 +130,11 @@ namespace MicroCoin.CheckPoints
                 cb.Accounts.Add(accountdb.GetCollection<Account>().FindById(i));
             }
             return cb;
+        }
+
+        public void UpdateBlock(CheckPointBlock block)
+        {
+            checkpointdb.GetCollection<CheckPointBlock>().Update(block);
         }
     }
 }

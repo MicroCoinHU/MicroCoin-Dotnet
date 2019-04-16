@@ -30,6 +30,7 @@ using Prism.Events;
 using System.Diagnostics;
 using System.Collections.Concurrent;
 using MicroCoin.Handlers;
+using MicroCoin.Cryptography;
 
 namespace MicroCoin.CheckPoints
 {
@@ -52,6 +53,7 @@ namespace MicroCoin.CheckPoints
 
         private readonly Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
         private readonly IList<string> pendingTransactions = new List<string>();
+        private List<Hash> hashBuffer = new List<Hash>();
         private readonly object checkPointLock = new object();
         private ulong accountWork = 0;
 
@@ -104,65 +106,139 @@ namespace MicroCoin.CheckPoints
             return block;
         }
 
-        public void ProcessBlock(Block block)
-        {           
-            lock (checkPointLock)
+        protected void UpgradeBlocks()
+        {
+            hashBuffer.Clear();
+            for (int i = 0; i < 101; i++)
             {
-                if (GetBlock((int)block.Id) != null) return;
-                CheckPointBlock checkPointBlock = new CheckPointBlock
-                {
-                    Header = block.Header
-                };
-                for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
-                {
-                    ulong totalFee = 0;
-                    if (block.Transactions != null)
-                        totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
-                    var account = new Account
-                    {
-                        AccountNumber = i,
-                        BlockNumber = block.Id,
-                        TransactionCount = 0,
-                        UpdatedBlock = block.Id,
-                        Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
-                    };
-                    account.AccountInfo.AccountKey = block.Header.AccountKey;
-                    account.AccountInfo.State = AccountState.Normal;
-                    checkPointBlock.Accounts.Add(account);
-                }
-                if (block.Transactions != null)
-                {
-                    foreach (ITransaction item in block.Transactions)
-                    {
-                        try
-                        {
-                            ProcessTransaction(item, block);
-                        }
-                        catch (InvalidTransactionException e)
-                        {
-                            ProcessTransaction(item, block);
-                        }
-                    }
-                }
-                logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
-                accountWork += block.Header.CompactTarget;
-                checkPointBlock.AccumulatedWork = accountWork;
-                checkPointBlock.BlockHash = checkPointBlock.CalculateBlockHash();
-                modifiedBlocks.Add(checkPointBlock);                
-                if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
-                {
-                    checkPointStorage.AddBlocks(modifiedBlocks);
-                    checkPointStorage.AddAccounts(modifiedAccounts);
-                    modifiedBlocks.Clear();
-                    modifiedAccounts.Clear();
-                }
+                var block = GetBlock(i);
+                block.Header = blockChain.GetBlock((uint)i).Header;
+                block.BlockHash = block.CalculateBlockHash(false);
+                hashBuffer.Add(block.BlockHash);
+               // checkPointStorage.UpdateBlock(block);
             }
         }
 
-        private void ProcessTransaction(ITransaction transaction, Block block = null)
+        public void ProcessBlock(Block block)
+        {
+            try
+            {
+                lock (checkPointLock)
+                {
+                    if (GetBlock((int)block.Id) != null) return;
+                    if (block.Id == 101)
+                    {
+                        UpgradeBlocks();
+                    }
+                    CheckPointBlock checkPointBlock = new CheckPointBlock
+                    {
+                        Header = block.Header
+                    };
+                    for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
+                    {
+                        ulong totalFee = 0;
+                        if (block.Transactions != null)
+                            totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
+                        var account = new Account
+                        {
+                            AccountNumber = i,
+                            BlockNumber = block.Id,
+                            TransactionCount = 0,
+                            UpdatedBlock = block.Id,
+                            Balance = i % 5 == 0 ? (1000000UL + totalFee) : 0UL
+                        };
+                        account.AccountInfo.AccountKey = block.Header.AccountKey;
+                        account.AccountInfo.State = AccountState.Normal;
+                        checkPointBlock.Accounts.Add(account);
+                    }
+                    logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
+                    accountWork += block.Header.CompactTarget;
+
+                    checkPointBlock.AccumulatedWork = accountWork;
+
+                    foreach (var n in modifiedBlocks)
+                    {
+                        var newHash = n.CalculateBlockHash(block.Id < 101);
+                        if (newHash != n.BlockHash)
+                        {
+                            hashBuffer[(int)n.Id] = newHash;
+                            n.BlockHash = newHash;
+                        }
+                    }
+
+                    Hash sha;
+                    if (hashBuffer.Count == 0)
+                    {
+                        sha = Utils.Sha256(Params.GenesisPayload);
+                    }
+                    else
+                    {
+                        sha = Utils.Sha256(string.Join("",hashBuffer.ToArray()));
+                    }
+
+                    if (sha != checkPointBlock.Header.CheckPointHash)
+                    {
+                        throw new Exception("Invalid checkpoint hash");
+                    }
+                    if (block.Transactions != null)
+                    {
+                        foreach (ITransaction item in block.Transactions)
+                        {
+                            try
+                            {
+                                var accounts = ProcessTransaction(item, block);
+                                foreach (var account in accounts)
+                                {
+                                    var mBlock = GetBlock(account.AccountNumber / 5);
+                                    if (mBlock.Header == null)
+                                        mBlock.Header = blockChain.GetBlock((uint)(account.AccountNumber / 5)).Header;
+                                    int accountIndex = account.AccountNumber % 5;
+                                    mBlock.Accounts[accountIndex] = account;
+                                    var newHash = mBlock.CalculateBlockHash(block.Id < 101);
+                                    if(block.Id == 2283)
+                                    {
+                                        Debug.WriteLine("OK");
+                                    }
+                                    hashBuffer[(int)mBlock.Id] = newHash;
+                                    mBlock.BlockHash = newHash;
+                                    if (!modifiedBlocks.Any(p => p.Id == mBlock.Id))
+                                    {
+                                        modifiedBlocks.Add(mBlock);
+                                    }
+                                }
+                            }
+                            catch (InvalidTransactionException e)
+                            {
+                                ProcessTransaction(item, block);
+                            }
+                        }
+                    }
+                    checkPointBlock.BlockHash = checkPointBlock.CalculateBlockHash(block.Id < 101);
+                    hashBuffer.Add(checkPointBlock.BlockHash);
+                    if (!modifiedBlocks.Any(p => p.Id == checkPointBlock.Id))
+                    {
+                        modifiedBlocks.Add(checkPointBlock);
+                    }
+                    if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
+                    {
+                        checkPointStorage.AddBlocks(modifiedBlocks);
+                        checkPointStorage.AddAccounts(modifiedAccounts);
+                        modifiedBlocks.Clear();
+                        modifiedAccounts.Clear();
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Debug.Fail(e.StackTrace);
+            }
+        }
+
+        private IList<Account> ProcessTransaction(ITransaction transaction, Block block = null)
         {
             lock (checkPointLock)
             {
+                var modifiedAccounts = new List<Account>();
                 var sha = transaction.SHA();
                 if (pendingTransactions.Contains(sha))
                 {
@@ -172,7 +248,7 @@ namespace MicroCoin.CheckPoints
                         signer.UpdatedBlock = block.Id;
                         pendingTransactions.Remove(sha);
                     }
-                    return;
+                    return modifiedAccounts;
                 }
                 dynamic validator = GetValidator(transaction);
                 if (validator != null && transaction != null)
@@ -185,7 +261,7 @@ namespace MicroCoin.CheckPoints
                         }
                         throw new InvalidTransactionException("Invalid transaction");
                     }
-                    ApplyTransaction(transaction, block);
+                    modifiedAccounts.AddRange(ApplyTransaction(transaction, block));
                 }
                 else
                 {
@@ -196,10 +272,11 @@ namespace MicroCoin.CheckPoints
                 {
                     pendingTransactions.Add(sha);
                 }
+                return modifiedAccounts;
             }
         }
 
-        private void ApplyTransaction(ITransaction transaction, Block block)
+        private IList<Account> ApplyTransaction(ITransaction transaction, Block block)
         {
             var modified = transaction.Apply(this);
             foreach (var account in modified)
@@ -213,6 +290,7 @@ namespace MicroCoin.CheckPoints
                     modifiedAccounts.Add(account);
                 }
             }
+            return modified;
         }
 
         private dynamic GetValidator(ITransaction transaction)

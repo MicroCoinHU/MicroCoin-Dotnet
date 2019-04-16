@@ -81,6 +81,10 @@ namespace MicroCoin.Chain
                     bw.Write(LockedUntilBlock);
                     bw.Write(Price);
                     bw.Write(AccountToPayPrice);
+                    if (NewPublicKey == null)
+                    {
+                        NewPublicKey = new ECKeyPair();
+                    }
                     NewPublicKey.SaveToStream(bw.BaseStream, false);
                     break;
                 case AccountState.Unknown:

@@ -157,6 +157,8 @@ namespace MicroCoin.Transactions
             {
                 target.AccountInfo.NewPublicKey = NewPublicKey;
             }
+            target.AccountInfo.AccountToPayPrice = AccountToPay;
+            target.AccountInfo.Price = AccountPrice;
             signer.TransactionCount++;
             signer.Balance -= Fee;
             return new List<Account> { signer, target };

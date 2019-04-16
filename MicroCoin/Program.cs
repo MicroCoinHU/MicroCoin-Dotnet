@@ -187,22 +187,6 @@ namespace MicroCoin
                     node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
             }, ThreadOption.BackgroundThread, false);
 
-            Hash gHash = Utils.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload));
-            //Hash s = ServiceLocator.ServiceProvider.GetService<ICheckPointStorage>().CheckPointHash;
-            MemoryStream ms = new MemoryStream();            
-            ms.Write(gHash, 0, gHash.Length);
-            var b = ServiceLocator.ServiceProvider.GetService<ICheckPointStorage>().GetBlock(0);
-            Hash bh = b.CalculateBlockHash();
-            b = ServiceLocator.ServiceProvider.GetService<ICheckPointStorage>().GetBlock(1);
-            bh = b.CalculateBlockHash() + bh;
-            ms.Write(bh, 0, bh.Length);
-            ms.Position = 0;
-            using(var sha = new SHA256Managed())
-            {
-                Hash hash = sha.ComputeHash(ms);
-                Console.WriteLine(hash);
-            }
-
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {
                 throw new Exception("NO FIX SEEDS FOUND");
