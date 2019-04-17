@@ -91,6 +91,7 @@ namespace MicroCoin.Net
                 if (Started) throw new InvalidOperationException("Client already started");
                 if (!IsConnected) throw new InvalidOperationException("Not connected");
             }
+            logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
             using (var sendStream = new MemoryStream())
             {
                 packet.Header.DataLength = packet.RawData.Length;

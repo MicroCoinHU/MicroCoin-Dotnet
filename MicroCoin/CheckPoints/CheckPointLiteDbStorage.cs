@@ -81,11 +81,11 @@ namespace MicroCoin.CheckPoints
             }
         }
 
-        public Hash CheckPointHash
+        public List<Hash> CheckPointHash
         {
             get
             {
-                return string.Join("", checkpointdb.GetCollection<CheckPointBlock>().FindAll().Select(p => p.BlockHash).ToArray());
+                return  checkpointdb.GetCollection<CheckPointBlock>().FindAll().Select(p => p.BlockHash).ToList();
             }
         }
 

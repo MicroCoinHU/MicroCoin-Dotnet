@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Common;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System.IO;
@@ -129,9 +130,9 @@ namespace MicroCoin.BlockChain
         {
             var header = GetBlockHeaderForHash();
             Hash headerHash = header.GetBlockHeaderHash((uint)Nonce, Timestamp);
-            using (SHA256Managed sha = new SHA256Managed())
+            using (SHA256 sha = SHA256.Create())
             {
-                Hash hash = Utils.DoubleSha256(headerHash);
+                Hash hash = ServiceLocator.GetService<ICryptoService>().DoubleSha256(headerHash);
                 return hash.SequenceEqual(ProofOfWork);
             }
 
@@ -141,7 +142,7 @@ namespace MicroCoin.BlockChain
         {
             var header = GetBlockHeaderForHash();
             Hash headerHash = header.GetBlockHeaderHash((uint)Nonce, Timestamp);
-            Hash hash = Utils.DoubleSha256(headerHash);
+            Hash hash = ServiceLocator.GetService<ICryptoService>().DoubleSha256(headerHash);
             return hash;
         }
 

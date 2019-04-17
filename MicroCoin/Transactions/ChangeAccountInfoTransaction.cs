@@ -133,10 +133,12 @@ namespace MicroCoin.Transactions
     {
         private readonly ICheckPointService checkPointService;
         private readonly IBlockChain blockChain;
-        public ChangeAccountInfoTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
+        private readonly ICryptoService cryptoService;
+        public ChangeAccountInfoTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain, ICryptoService cryptoService)
         {
             this.checkPointService = checkPointService;
             this.blockChain = blockChain;
+            this.cryptoService = cryptoService;
         }
 
         public bool IsValid(ChangeAccountInfoTransaction transaction)
@@ -154,7 +156,7 @@ namespace MicroCoin.Transactions
 
             if (signerAccount.Balance < transaction.Fee) return false;
 
-            if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
+            if (!cryptoService.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
             {
                 return false;
             }

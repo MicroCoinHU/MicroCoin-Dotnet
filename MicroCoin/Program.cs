@@ -124,6 +124,7 @@ namespace MicroCoin
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
                 .AddSingleton<ICheckPointService, CheckPointService>()
                 .AddSingleton<IPeerManager, PeerManager>()
+                .AddSingleton<ICryptoService, CryptoService>()
                 .AddSingleton<IHandler<NewTransactionRequest>, NewTransactionHandler>()
                 .AddSingleton<IHandler<HelloRequest>, HelloHandler>()
                 .AddSingleton<IHandler<HelloResponse>, HelloHandler>()
@@ -193,51 +194,57 @@ namespace MicroCoin
             }
             var bc = ServiceLocator.GetService<IBlockChain>();
             var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
-            foreach (var bestNode in bestNodes)
+            var error = false;
+            do
             {
-                if (bestNode.BlockHeight > bc.BlockHeight)
+                foreach (var bestNode in bestNodes)
                 {
-                    var remoteBlock = bestNode.BlockHeight;
-                    do
+                    if (bestNode.BlockHeight > bc.BlockHeight)
                     {
-                        NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
+                        if (!bestNode.Connected) bestNode.NetClient.Connect(bestNode);
+                        var remoteBlock = bestNode.BlockHeight;
+                        do
                         {
-                            Message = new BlockRequest
+                            NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
                             {
-                                StartBlock = (uint)(bc.BlockHeight > 0 ? bc.BlockHeight + 1 : bc.BlockHeight),
-                                NumberOfBlocks = 10000
-                            }
-                        };
-                        NetworkPacket response;
-                        try
-                        {
-                            response = await bestNode.NetClient.SendAndWaitAsync(blockRequest);
-                        }
-                        catch (Exception)
-                        {
-                            break;
-                        }
-                        var blocks = response.Payload<BlockResponse>().Blocks;
-                        var st = Stopwatch.StartNew();
-                        var ok = await bc.AddBlocksAsync(blocks);
-                        if (!ok)
-                        {
-                            // I'm orphan?
-                            foreach(var block in blocks.OrderByDescending(p => p.Id))
-                            {
-                                var myBlock = bc.GetBlock(block.Id);
-                                if(block.Header.CompactTarget == myBlock.Header.CompactTarget)
+                                Message = new BlockRequest
                                 {
-                                    // On baseblock
+                                    StartBlock = (uint)(bc.BlockHeight > 0 ? bc.BlockHeight + 1 : bc.BlockHeight),
+                                    NumberOfBlocks = 100
+                                }
+                            };
+                            NetworkPacket response;
+                            try
+                            {
+                                response = await bestNode.NetClient.SendAndWaitAsync(blockRequest);
+                            }
+                            catch (Exception)
+                            {
+                                error = true;
+                                break;
+                            }
+                            error = false;
+                            var blocks = response.Payload<BlockResponse>().Blocks;
+                            var st = Stopwatch.StartNew();
+                            var ok = await bc.AddBlocksAsync(blocks);
+                            if (!ok)
+                            {
+                                // I'm orphan?
+                                foreach (var block in blocks.OrderByDescending(p => p.Id))
+                                {
+                                    var myBlock = bc.GetBlock(block.Id);
+                                    if (block.Header.CompactTarget == myBlock.Header.CompactTarget)
+                                    {
+                                        // On baseblock
+                                    }
                                 }
                             }
-                        }
-                        st.Stop();
-                        Console.WriteLine("Added {0} blocks with {2} transactions in {3}. New block height {1}", blocks.Count, bc.BlockHeight, blocks.Sum(p=>p.Transactions?.Count), st.Elapsed);
-                    } while (remoteBlock > bc.BlockHeight);
+                            st.Stop();
+                            Console.WriteLine("Added {0} blocks with {2} transactions in {3}. New block height {1}", blocks.Count, bc.BlockHeight, blocks.Sum(p => p.Transactions?.Count), st.Elapsed);
+                        } while (remoteBlock > bc.BlockHeight);
+                    }
                 }
-            }
-
+            } while (error);
             ServiceLocator.GetService<IDiscovery>().Start();
             Console.ReadLine();
             ServiceLocator.ServiceProvider.Dispose();

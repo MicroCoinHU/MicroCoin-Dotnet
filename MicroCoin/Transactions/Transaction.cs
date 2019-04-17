@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
+using MicroCoin.Common;
 using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System.Collections.Generic;
@@ -56,7 +57,7 @@ namespace MicroCoin.Transactions
 
         public ECSignature GetSignature()
         {
-            return Utils.GenerateSignature(GetHash(), AccountKey);
+            return ServiceLocator.GetService<ICryptoService>().GenerateSignature(GetHash(), AccountKey);
         }
 
         public bool SignatureValid()
@@ -85,7 +86,7 @@ namespace MicroCoin.Transactions
                         SaveToStream(m);
                         data = m.ToArray();                                                
                     }
-                    Hash hh = Utils.RipeMD160(data);
+                    Hash hh = ServiceLocator.GetService<ICryptoService>().RipeMD160(data);
                     string s = hh;
                     s = s.Substring(0, 20);
                     bw.Write(Encoding.ASCII.GetBytes(s), 0, 20);
@@ -111,7 +112,7 @@ namespace MicroCoin.Transactions
 
         public Hash SHA()
         {
-            return Utils.Sha256(GetHash());
+            return ServiceLocator.GetService<ICryptoService>().Sha256(GetHash());
         }
     }
 }

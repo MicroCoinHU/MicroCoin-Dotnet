@@ -113,7 +113,7 @@ namespace MicroCoin.CheckPoints
                 {
                     SaveToStream(bw, false, proto1);
                     ms.Position = 0;                    
-                    using (SHA256Managed sha = new SHA256Managed())
+                    using (SHA256 sha = SHA256.Create())
                     {
                         return sha.ComputeHash(ms);
                     }

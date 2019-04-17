@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Common;
+using MicroCoin.Cryptography;
 using MicroCoin.Transactions;
 using System.Collections.Generic;
 using System.IO;
@@ -51,7 +53,7 @@ namespace MicroCoin.BlockChain
                     ProofOfWork = new byte[0],
                     ProtocolVersion = 0,
                     Reward = 0,
-                    CheckPointHash = Cryptography.Utils.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
+                    CheckPointHash = ServiceLocator.GetService<ICryptoService>().Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
                     BlockSignature = 3,
                     Timestamp = 0
                 }

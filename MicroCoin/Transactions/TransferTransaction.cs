@@ -175,10 +175,13 @@ namespace MicroCoin.Transactions
     {
         private readonly ICheckPointService checkPointService;
         private readonly IBlockChain blockChain;
-        public TransferTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
+        private readonly ICryptoService cryptoService;
+
+        public TransferTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain, ICryptoService cryptoService)
         {
             this.checkPointService = checkPointService;
             this.blockChain = blockChain;
+            this.cryptoService = cryptoService;
         }
 
         public bool IsValid(TransferTransaction transaction)
@@ -189,7 +192,7 @@ namespace MicroCoin.Transactions
             var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
             //if (senderAccount.AccountInfo.State != AccountState.Normal) return false;
             if (senderAccount.AccountInfo.LockedUntilBlock > blockChain.BlockHeight) return false;
-            if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
+            if (!cryptoService.ValidateSignature(transaction.GetHash(), transaction.Signature, senderAccount.AccountInfo.AccountKey))
             {
                 return false;
             }

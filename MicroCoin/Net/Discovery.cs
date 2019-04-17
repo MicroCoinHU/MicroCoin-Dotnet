@@ -82,7 +82,7 @@ namespace MicroCoin.Net
                         logger.LogTrace("Sending hello to {0}", node.EndPoint);
                         var hello = await cl.SendAndWaitAsync(networkPacket);
                         node.BlockHeight = hello.Payload<HelloResponse>().Block.Header.BlockNumber;
-                        peerManager.AddNew(node);
+                        peerManager.AddNew(node);                        
                         logger.LogInformation("{0} alive", server.Address);
                     }
                     catch (Exception e)

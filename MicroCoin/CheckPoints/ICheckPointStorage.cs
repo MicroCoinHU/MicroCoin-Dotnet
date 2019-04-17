@@ -27,7 +27,7 @@ namespace MicroCoin.CheckPoints
     public interface ICheckPointStorage
     {
         CheckPointBlock LastBlock { get; }
-        Hash CheckPointHash { get; }
+        List<Hash> CheckPointHash { get; }
         void AddBlock(CheckPointBlock block);
         void AddBlocks(IEnumerable<CheckPointBlock> block);
         CheckPointBlock GetBlock(int blockNumber);

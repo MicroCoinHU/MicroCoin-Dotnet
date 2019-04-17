@@ -31,6 +31,7 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using MicroCoin.Handlers;
 using MicroCoin.Cryptography;
+using System.IO;
 
 namespace MicroCoin.CheckPoints
 {
@@ -47,7 +48,7 @@ namespace MicroCoin.CheckPoints
         private readonly ICheckPointStorage checkPointStorage;
         private readonly IBlockChain blockChain;
         private readonly ILogger<CheckPointService> logger;
-
+        private readonly ICryptoService cryptoService;
         private readonly IList<CheckPointBlock> modifiedBlocks = new List<CheckPointBlock>();
         private readonly IList<Account> modifiedAccounts = new List<Account>();
 
@@ -57,11 +58,13 @@ namespace MicroCoin.CheckPoints
         private readonly object checkPointLock = new object();
         private ulong accountWork = 0;
 
-        public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator, IBlockChain blockChain, ILogger<CheckPointService> logger)
+        public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator,
+            IBlockChain blockChain, ILogger<CheckPointService> logger, ICryptoService cryptoService)
         {
             this.checkPointStorage = checkPointStorage;
             this.blockChain = blockChain;
             this.logger = logger;
+            this.cryptoService = cryptoService;
             eventAggregator.GetEvent<BlocksAdded>().Subscribe(ProcessBlock, ThreadOption.PublisherThread);
             eventAggregator.GetEvent<NewTransaction>().Subscribe(HandleNewTransaction, ThreadOption.PublisherThread);
         }
@@ -136,6 +139,7 @@ namespace MicroCoin.CheckPoints
                     };
                     for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
                     {
+
                         ulong totalFee = 0;
                         if (block.Transactions != null)
                             totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
@@ -159,21 +163,25 @@ namespace MicroCoin.CheckPoints
                     foreach (var n in modifiedBlocks)
                     {
                         var newHash = n.CalculateBlockHash(block.Id < 101);
-                        if (newHash != n.BlockHash)
-                        {
-                            hashBuffer[(int)n.Id] = newHash;
-                            n.BlockHash = newHash;
-                        }
+                        hashBuffer[(int)n.Id] = newHash;
+                        n.BlockHash = newHash;
                     }
 
                     Hash sha;
                     if (hashBuffer.Count == 0)
                     {
-                        sha = Utils.Sha256(Params.GenesisPayload);
+                        sha = cryptoService.Sha256(Params.GenesisPayload);
                     }
                     else
                     {
-                        sha = Utils.Sha256(string.Join("",hashBuffer.ToArray()));
+                        using (var ms = new MemoryStream(hashBuffer.Count * 32))
+                        {
+                            foreach (var h in hashBuffer)
+                            {
+                                ms.Write(h, 0, 32);
+                            }
+                            sha = cryptoService.Sha256(ms);
+                        }
                     }
 
                     if (sha != checkPointBlock.Header.CheckPointHash)
@@ -195,10 +203,6 @@ namespace MicroCoin.CheckPoints
                                     int accountIndex = account.AccountNumber % 5;
                                     mBlock.Accounts[accountIndex] = account;
                                     var newHash = mBlock.CalculateBlockHash(block.Id < 101);
-                                    if(block.Id == 2283)
-                                    {
-                                        Debug.WriteLine("OK");
-                                    }
                                     hashBuffer[(int)mBlock.Id] = newHash;
                                     mBlock.BlockHash = newHash;
                                     if (!modifiedBlocks.Any(p => p.Id == mBlock.Id))
@@ -315,6 +319,7 @@ namespace MicroCoin.CheckPoints
             if (lastBlock != null)
             {
                 accountWork = lastBlock.AccumulatedWork;
+                hashBuffer = checkPointStorage.CheckPointHash;
             }
             var start = (blockChain.BlockHeight / 100) * 100;
             for (uint i = (uint)start; i <= blockChain.BlockHeight; i++)

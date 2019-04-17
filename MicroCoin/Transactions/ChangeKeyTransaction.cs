@@ -108,8 +108,8 @@ namespace MicroCoin.Transactions
                     if (AccountKey?.PublicKey.X != null && AccountKey.PublicKey.X.Length > 0 && AccountKey.PublicKey.Y.Length > 0)
                     {
                         bw.Write((ushort) AccountKey.CurveType);
-                        bw.Write((byte[]) AccountKey.PublicKey.X);
-                        bw.Write((byte[]) AccountKey.PublicKey.Y);
+                        bw.Write(AccountKey.PublicKey.X);
+                        bw.Write(AccountKey.PublicKey.Y);
                     }
                     else
                     {
@@ -135,6 +135,11 @@ namespace MicroCoin.Transactions
         {
             var account = checkPointService.GetAccount(TargetAccount);
             account.AccountInfo.AccountKey = NewAccountKey;
+            account.AccountInfo.State = AccountState.Normal;
+            account.AccountInfo.Price = 0;
+            account.AccountInfo.AccountToPayPrice = 0;
+            account.AccountInfo.NewPublicKey = new ECKeyPair();
+            account.AccountInfo.LockedUntilBlock = 0;
             var signer = checkPointService.GetAccount(SignerAccount);
             signer.Balance -= Fee;
             signer.TransactionCount++;
@@ -147,10 +152,13 @@ namespace MicroCoin.Transactions
 
         private readonly ICheckPointService checkPointService;
         private readonly IBlockChain blockChain;
-        public ChangeKeyTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
+        private readonly ICryptoService cryptoService;
+
+        public ChangeKeyTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain, ICryptoService cryptoService)
         {
             this.checkPointService = checkPointService;
             this.blockChain = blockChain;
+            this.cryptoService = cryptoService;
         }
 
 
@@ -171,7 +179,7 @@ namespace MicroCoin.Transactions
             if (targetAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
 
             if (signerAccount.Balance < transaction.Fee) return false;
-            if (!Utils.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
+            if (!cryptoService.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
             {
                 return false;
             }
