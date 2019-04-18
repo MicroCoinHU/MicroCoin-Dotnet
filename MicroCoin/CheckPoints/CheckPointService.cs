@@ -44,19 +44,23 @@ namespace MicroCoin.CheckPoints
 
     public class CheckPointService : ICheckPointService
     {
-
+        // Services
         private readonly ICheckPointStorage checkPointStorage;
         private readonly IBlockChain blockChain;
         private readonly ILogger<CheckPointService> logger;
         private readonly ICryptoService cryptoService;
+
+        // Lists & caches
         private readonly IList<CheckPointBlock> modifiedBlocks = new List<CheckPointBlock>();
         private readonly IList<Account> modifiedAccounts = new List<Account>();
-
         private readonly Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
         private readonly IList<string> pendingTransactions = new List<string>();
-        private List<Hash> hashBuffer = new List<Hash>();
+        private readonly List<Hash> hashBuffer = new List<Hash>();
+        
+        // internal variables
         private readonly object checkPointLock = new object();
-        private ulong accountWork = 0;
+
+        private ulong accumulatedWork = 0;
 
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator,
             IBlockChain blockChain, ILogger<CheckPointService> logger, ICryptoService cryptoService)
@@ -122,7 +126,6 @@ namespace MicroCoin.CheckPoints
                 block.BlockHash = block.CalculateBlockHash(false);
                 hashBuffer.Add(block.BlockHash);
                 modifiedBlocks.Add(block);
-               // checkPointStorage.UpdateBlock(block);
             }
         }
 
@@ -160,15 +163,14 @@ namespace MicroCoin.CheckPoints
                         checkPointBlock.Accounts.Add(account);
                     }
                     logger.LogInformation("Processing #{0} block and {1} transaction", checkPointBlock.Id, block.Transactions?.Count);
-                    accountWork += block.Header.CompactTarget;
+                    accumulatedWork += block.Header.CompactTarget;
 
-                    checkPointBlock.AccumulatedWork = accountWork;
+                    checkPointBlock.AccumulatedWork = accumulatedWork;
 
                     foreach (var n in modifiedBlocks)
                     {
-                        var newHash = n.CalculateBlockHash(block.Id < 101);
-                        hashBuffer[(int)n.Id] = newHash;
-                        n.BlockHash = newHash;
+                        n.BlockHash = n.CalculateBlockHash(block.Id < 101);
+                        hashBuffer[(int)n.Id] = n.BlockHash;
                     }
 
                     Hash sha;
@@ -252,8 +254,14 @@ namespace MicroCoin.CheckPoints
                 {
                     if (block != null)
                     {
-                        var signer = GetAccount(transaction.SignerAccount);
-                        signer.UpdatedBlock = block.Id;
+                        var accounts = transaction.Apply(this);                           
+                        foreach(var account in accounts)
+                        {
+                            if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
+                            {
+                                modifiedAccounts.Add(account);
+                            }
+                        }
                         pendingTransactions.Remove(sha);
                     }
                     return modifiedAccounts;
@@ -329,13 +337,14 @@ namespace MicroCoin.CheckPoints
             var lastBlock = checkPointStorage.LastBlock;
             if (lastBlock != null)
             {
-                accountWork = lastBlock.AccumulatedWork;
-                hashBuffer = checkPointStorage.CheckPointHash;
+                accumulatedWork = lastBlock.AccumulatedWork;
+                hashBuffer.Clear();
+                hashBuffer.AddRange(checkPointStorage.CheckPointHash);
             }
             var start = (blockChain.BlockHeight / 100) * 100;
             for (uint i = (uint)start; i <= blockChain.BlockHeight; i++)
             {
-                var block = blockChain.GetBlock(i);                
+                var block = blockChain.GetBlock(i);
                 if (block == null) return;
                 ProcessBlock(block);
             }
