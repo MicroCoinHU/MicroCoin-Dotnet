@@ -159,13 +159,22 @@ namespace MicroCoin.Transactions
             }
             if(TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
             {
-                seller.Balance += Amount;
-                sender.Balance -= Amount;
-                sender.Balance -= Fee;
+                seller.Balance += target.AccountInfo.Price;
+                sender.Balance -= (Amount + Fee);
+                target.Balance += (Amount - target.AccountInfo.Price);
                 target.AccountInfo.AccountKey = NewAccountKey;
                 target.AccountInfo.State = AccountState.Normal;
+                target.AccountInfo.LockedUntilBlock = 0;
+                target.AccountInfo.AccountToPayPrice = 0;
+                target.AccountInfo.NewPublicKey = new ECKeyPair();
+                target.AccountInfo.Price = 0;
                 sender.TransactionCount++;
-                return new List<Account>() { sender, target, seller };
+                if (Block != 0)
+                {
+                    target.UpdatedBlock = Block;
+                    seller.UpdatedBlock = Block;
+                }
+                return new List<Account>() { sender, seller, target };
             }
             return new List<Account>();
         }

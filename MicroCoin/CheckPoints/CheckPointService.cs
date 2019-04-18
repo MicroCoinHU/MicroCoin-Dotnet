@@ -155,7 +155,7 @@ namespace MicroCoin.CheckPoints
                         account.AccountInfo.State = AccountState.Normal;
                         checkPointBlock.Accounts.Add(account);
                     }
-                    logger.LogInformation("Processed #{0} block", checkPointBlock.Id);
+                    logger.LogInformation("Processing #{0} block and {1} transaction", checkPointBlock.Id, block.Transactions?.Count);
                     accountWork += block.Header.CompactTarget;
 
                     checkPointBlock.AccumulatedWork = accountWork;
