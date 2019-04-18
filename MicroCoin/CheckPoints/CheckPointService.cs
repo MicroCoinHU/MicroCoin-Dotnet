@@ -88,7 +88,10 @@ namespace MicroCoin.CheckPoints
             if (account != null) return account;
             var block = GetBlockForAccount(accountNumber);
             account = block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-            modifiedAccounts.Add(account);
+            if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+            {
+                modifiedAccounts.Add(account);
+            }
             return account;
         }
 
@@ -266,7 +269,14 @@ namespace MicroCoin.CheckPoints
                         }
                         throw new InvalidTransactionException("Invalid transaction");
                     }
-                    modifiedAccounts.AddRange(ApplyTransaction(transaction, block));
+                    var accounts = ApplyTransaction(transaction, block);
+                    foreach(var account in accounts)
+                    {
+                        if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+                        {
+                            modifiedAccounts.Add(account);
+                        }
+                    }
                 }
                 else
                 {
