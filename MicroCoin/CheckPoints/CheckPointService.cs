@@ -118,6 +118,7 @@ namespace MicroCoin.CheckPoints
                 block.Header = blockChain.GetBlock((uint)i).Header;
                 block.BlockHash = block.CalculateBlockHash(false);
                 hashBuffer.Add(block.BlockHash);
+                modifiedBlocks.Add(block);
                // checkPointStorage.UpdateBlock(block);
             }
         }
