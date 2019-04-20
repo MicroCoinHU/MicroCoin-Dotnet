@@ -205,23 +205,29 @@ namespace MicroCoin.Cryptography
                 var X = new BigInteger(1, br.ReadBytes(xLen)).ToByteArrayUnsigned();
                 ushort yLen = br.ReadUInt16();
                 var Y = new BigInteger(1, br.ReadBytes(yLen)).ToByteArrayUnsigned();
-                if (CurveType != ECCurveType.Empty && CurveType != ECCurveType.Sect283K1 && false)
+                try
                 {
-                    ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString());
-                    var ecdsa = ECDsa.Create(curve);
-                    while (X.Length * 8 < ecdsa.KeySize)
+                    if (CurveType != ECCurveType.Empty && CurveType != ECCurveType.Sect283K1)
                     {
-                        var padded = X.ToList();
-                        padded.Insert(0, 0);
-                        X = padded.ToArray();
+                        ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString().ToLower());
+                        var ecdsa = ECDsa.Create(curve);
+                        while (X.Length * 8 < ecdsa.KeySize)
+                        {
+                            var padded = X.ToList();
+                            padded.Insert(0, 0);
+                            X = padded.ToArray();
+                        }
+                        if (Y.Length * 8 < ecdsa.KeySize)
+                        {
+                            var padded = Y.ToList();
+                            padded.Insert(0, 0);
+                            Y = padded.ToArray();
+                        }
+                        ecdsa.Dispose();
                     }
-                    if (Y.Length * 8 < ecdsa.KeySize)
-                    {
-                        var padded = Y.ToList();
-                        padded.Insert(0, 0);
-                        Y = padded.ToArray();
-                    }
-                    ecdsa.Dispose();
+                }catch(Exception e)
+                {
+                    // ECdsa implementation not supported, fallback to bouncycastle
                 }
                 PublicKey = new ECPoint() { X = X, Y = Y };
                 if (readPrivateKey)

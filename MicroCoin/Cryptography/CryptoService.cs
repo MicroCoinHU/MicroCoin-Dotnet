@@ -27,6 +27,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Math.EC;
 using Org.BouncyCastle.Security;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -39,6 +40,7 @@ namespace MicroCoin.Cryptography
     {
         private readonly SHA256 sha = SHA256.Create();
         private readonly object shaLock = new object();
+        private List<ECCurveType> notSupportedECs = new List<ECCurveType>();
         public async Task<ECSignature> GenerateSignatureAsync(Hash data, ECKeyPair keyPair) => await Task.Run<ECSignature>(() => GenerateSignature(data, keyPair));
         public CryptoService()
         {
@@ -86,7 +88,7 @@ namespace MicroCoin.Cryptography
 
         public bool ValidateSignature(Hash data, ECSignature signature, ECKeyPair keyPair)
         {
-            if (keyPair.CurveType != ECCurveType.Sect283K1)
+            if (keyPair.CurveType != ECCurveType.Sect283K1 && !notSupportedECs.Contains(keyPair.CurveType))
             {
                 try
                 {
@@ -109,6 +111,7 @@ namespace MicroCoin.Cryptography
                 }
                 catch (Exception)
                 {
+                    notSupportedECs.Add(keyPair.CurveType);
                 }
             }
             var derSignature = new DerSequence(
