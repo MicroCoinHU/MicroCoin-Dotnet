@@ -39,9 +39,14 @@ namespace MicroCoin.Handlers
         protected void HandleRequest(NetworkPacket packet)
         {
             var hello = packet.Payload<HelloRequest>();
+            if (hello.AccountKey.Equals(Params.NodeKey))
+            {
+                peerManager.Remove(packet.Node);
+                return;
+            }
             var response = new HelloResponse()
             {
-                AccountKey = ECKeyPair.CreateNew(),
+                AccountKey = Params.NodeKey,
                 NodeServers = new NodeServerList(),
                 ServerPort = Params.ServerPort,
                 Timestamp = DateTime.UtcNow,
@@ -50,6 +55,7 @@ namespace MicroCoin.Handlers
                 WorkSum = 0
             };
             packet.Node.NetClient.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response), packet.Header.RequestId);
+            packet.Node.BlockHeight = hello.Block.Header.BlockNumber;
             CheckPeers(hello.NodeServers);
             if (hello.Block.Header.BlockNumber > blockChain.BlockHeight)
             {
@@ -73,6 +79,11 @@ namespace MicroCoin.Handlers
         protected void HandleResponse(NetworkPacket packet)
         {
             var hello = packet.Payload<HelloRequest>();
+            if (hello.AccountKey.Equals(Params.NodeKey))
+            {
+                peerManager.Remove(packet.Node);
+            }
+            packet.Node.BlockHeight = hello.Block.Header.BlockNumber;
             CheckPeers(hello.NodeServers);
             if (hello.Block.Header.BlockNumber > blockChain.BlockHeight)
             {

@@ -31,8 +31,8 @@ namespace MicroCoin.CheckPoints
     {
         private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
         private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
-        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");       
-        //string.Join("", checkpointdb.GetCollection<CheckPointBlock>().FindAll().Select(p => p.BlockHash).ToArray());
+        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
+
         public CheckPointLiteDbStorage()
         {
             var mapper = BsonMapper.Global;

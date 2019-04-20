@@ -17,6 +17,7 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using System;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace MicroCoin.Net
@@ -26,6 +27,7 @@ namespace MicroCoin.Net
         bool IsConnected { get; }
         bool Started { get; set; }
         bool Connect(Node node, int timeout = 500);
+        Node HandleClient(TcpClient client);
         void Send(NetworkPacket packet, uint requestId = 0);
         Task<NetworkPacket> SendAndWaitAsync(NetworkPacket packet);
         void Start();

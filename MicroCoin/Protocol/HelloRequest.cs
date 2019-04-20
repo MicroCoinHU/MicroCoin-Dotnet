@@ -47,7 +47,7 @@ namespace MicroCoin.Protocol
         {
             return new HelloRequest()
             {
-                AccountKey = ECKeyPair.CreateNew(),
+                AccountKey = Params.NodeKey,
                 NodeServers = new NodeServerList(),
                 ServerPort = Params.ServerPort,
                 Timestamp = DateTime.UtcNow,

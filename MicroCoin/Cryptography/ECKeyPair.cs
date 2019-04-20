@@ -46,9 +46,9 @@ namespace MicroCoin.Cryptography
     {
         public ECCurveType CurveType { get; set; } = ECCurveType.Empty;
         public byte[] D { get; set; }
-        public Org.BouncyCastle.Math.BigInteger PrivateKey
+        public BigInteger PrivateKey
         {
-            get => D == null ? Org.BouncyCastle.Math.BigInteger.Zero : new Org.BouncyCastle.Math.BigInteger(D);
+            get => D == null ? BigInteger.Zero : new BigInteger(D);
             set => D = value.ToByteArray();
         }
 
@@ -205,7 +205,7 @@ namespace MicroCoin.Cryptography
                 var X = new BigInteger(1, br.ReadBytes(xLen)).ToByteArrayUnsigned();
                 ushort yLen = br.ReadUInt16();
                 var Y = new BigInteger(1, br.ReadBytes(yLen)).ToByteArrayUnsigned();
-                if (CurveType != ECCurveType.Empty && CurveType != ECCurveType.Sect283K1)
+                if (CurveType != ECCurveType.Empty && CurveType != ECCurveType.Sect283K1 && false)
                 {
                     ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString());
                     var ecdsa = ECDsa.Create(curve);

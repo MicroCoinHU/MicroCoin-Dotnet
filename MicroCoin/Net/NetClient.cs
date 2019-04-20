@@ -50,26 +50,36 @@ namespace MicroCoin.Net
         {
             this.eventAggregator = eventAggregator;
             this.logger = logger;
+            TcpClient.NoDelay = true;
         }
+
         public bool Connect(Node node, int timeout = 500)
         {
             lock (clientLock)
             {
-                if (IsConnected) return IsConnected;
-                Node = node;                
-                var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, (a) =>
+                try
                 {
-                    try
+                    if (IsConnected) return IsConnected;
+                    Node = node;
+                    var asyncResult = TcpClient.BeginConnect(node.IP, node.Port, (a) =>
                     {
-                        TcpClient.EndConnect(a);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }, null);
-                bool connected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
-                Node.NetClient = this;
-                return connected;
+                        try
+                        {
+                            TcpClient.EndConnect(a);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }, null);
+                    bool connected = asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromMilliseconds(timeout));
+                    Node.NetClient = this;
+                    return connected;
+                }
+                catch (Exception e)
+                {
+                    logger.LogDebug(e.Message);
+                    return false;
+                }
             }
         }
         public void Start()
@@ -127,11 +137,11 @@ namespace MicroCoin.Net
                             }
                             if (header.RequestType != RequestType.Response || header.Operation != packet.Header.Operation || header.RequestId != packet.Header.RequestId)
                             {
-                                logger.LogWarning("Dropping package {0} {1}", header.Operation, header
-                                    .RequestType);
+                                logger.LogWarning("Dropping package {0} {1}", header.Operation, header.RequestType);
                                 br.ReadBytes(header.DataLength); // Drop package
                                 continue;
                             }
+                            logger.LogInformation("Received package {0} {1}", header.Operation, header.RequestType);
                             return new NetworkPacket(header)
                             {
                                 Node = Node,
@@ -228,6 +238,10 @@ namespace MicroCoin.Net
                         logger.LogWarning(Node.EndPoint + " " + e.Message);
                         return;
                     }
+                    catch(ObjectDisposedException e)
+                    {
+                        logger.LogWarning(Node.EndPoint + " disconnected");
+                    }
                 }
             }
             finally
@@ -248,6 +262,21 @@ namespace MicroCoin.Net
             }
             TcpClient.Dispose();
             GC.SuppressFinalize(this);
+        }
+
+        public Node HandleClient(TcpClient client)
+        {
+            TcpClient?.Dispose();
+            Node = new Node
+            {
+                IP = (client.Client.RemoteEndPoint as IPEndPoint).Address.ToString(),
+                Port = (ushort)(client.Client.RemoteEndPoint as IPEndPoint).Port,
+                BlockHeight = 0,
+                NetClient = this
+            };
+            TcpClient = client;
+            Start();
+            return Node;
         }
     }
 }

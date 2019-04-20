@@ -61,8 +61,9 @@ namespace MicroCoin.Net
         public void Remove(Node node)
         {
             lock (lobj)
-            {
+            {                
                 peers.Remove(node);
+                node.NetClient?.Dispose();
             }
         }
     }

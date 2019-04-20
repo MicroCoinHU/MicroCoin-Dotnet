@@ -82,7 +82,7 @@ namespace MicroCoin.Net
                         logger.LogTrace("Sending hello to {0}", node.EndPoint);
                         var hello = await cl.SendAndWaitAsync(networkPacket);
                         node.BlockHeight = hello.Payload<HelloResponse>().Block.Header.BlockNumber;
-                        peerManager.AddNew(node);                        
+                        peerManager.AddNew(node);
                         logger.LogInformation("{0} alive", server.Address);
                     }
                     catch (Exception e)
@@ -105,6 +105,7 @@ namespace MicroCoin.Net
         {
             try
             {
+                var rand = new Random();
                 while (true)
                 {
                     if (peerManager.GetNodes().Count() == 0)
@@ -118,8 +119,7 @@ namespace MicroCoin.Net
                             });
                         }
                     }
-                    var rand = new Random();
-                    var needHello = peerManager.GetNodes().Where(p => p.Connected && p.LastConnection < DateTime.Now.Subtract(new TimeSpan(0, 0, 45 + rand.Next(30))));
+                    var needHello = peerManager.GetNodes().Where(p => p.Connected && p.LastConnection < DateTime.UtcNow.Subtract(new TimeSpan(0, 0, 45 + rand.Next(30))));
                     foreach (var node in needHello)
                     {
                         if (!node.NetClient.Started) node.NetClient.Start();

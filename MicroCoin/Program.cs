@@ -133,13 +133,14 @@ namespace MicroCoin
                 .AddSingleton<IHandler<CheckPointResponse>, CheckPointHandler>()
                 .AddSingleton<IDiscovery, Discovery>()
                 .AddTransient<INetClient, NetClient>()
+                .AddTransient<INetServer, NetServer>()
                 .AddSingleton<ITransactionValidator<TransferTransaction>, TransferTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ChangeKeyTransaction>, ChangeKeyTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ChangeAccountInfoTransaction>, ChangeAccountInfoTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ListAccountTransaction>, ListAccountTransactionValidator>()
                 .AddLogging(builder =>
                 {
-                    builder.SetMinimumLevel( Microsoft.Extensions.Logging.LogLevel.Trace);
+                    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
                    
                     builder.AddNLog(new NLogProviderOptions()
                     {
@@ -200,16 +201,16 @@ namespace MicroCoin
                 foreach (var bestNode in bestNodes)
                 {
                     if (bestNode.BlockHeight > bc.BlockHeight)
-                    {
-                        if (!bestNode.Connected) bestNode.NetClient.Connect(bestNode);
+                    {                        
                         var remoteBlock = bestNode.BlockHeight;
                         do
                         {
+                            var blockHeight = bc.BlockHeight;
                             NetworkPacket<BlockRequest> blockRequest = new NetworkPacket<BlockRequest>(NetOperationType.Blocks, RequestType.Request)
                             {
                                 Message = new BlockRequest
                                 {
-                                    StartBlock = (uint)(bc.BlockHeight > 0 ? bc.BlockHeight + 1 : bc.BlockHeight),
+                                    StartBlock = (uint)(blockHeight > 0 ? blockHeight + 1 : blockHeight),
                                     NumberOfBlocks = 100
                                 }
                             };
@@ -225,7 +226,6 @@ namespace MicroCoin
                             }
                             error = false;
                             var blocks = response.Payload<BlockResponse>().Blocks;
-                            var st = Stopwatch.StartNew();
                             var ok = await bc.AddBlocksAsync(blocks);
                             if (!ok)
                             {
@@ -239,13 +239,12 @@ namespace MicroCoin
                                     }
                                 }
                             }
-                            st.Stop();
-                            Console.WriteLine("Added {0} blocks with {2} transactions in {3}. New block height {1}", blocks.Count, bc.BlockHeight, blocks.Sum(p => p.Transactions?.Count), st.Elapsed);
                         } while (remoteBlock > bc.BlockHeight);
                     }
                 }
             } while (error);
             ServiceLocator.GetService<IDiscovery>().Start();
+            ServiceLocator.GetService<INetServer>().Start();
             Console.ReadLine();
             ServiceLocator.ServiceProvider.Dispose();
         }

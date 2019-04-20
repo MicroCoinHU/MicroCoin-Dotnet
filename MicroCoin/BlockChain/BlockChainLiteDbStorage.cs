@@ -167,6 +167,11 @@ namespace MicroCoin.BlockChain
             return block;
         }
 
+        public BlockHeader GetBlockHeader(uint blockNumber)
+        {
+            return db.GetCollection<BlockHeader>().FindById((int)blockNumber);
+        }
+
         public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
         {
             var blockHeaders = db.GetCollection<BlockHeader>().Find(p => p.Id >= startBlock && p.Id <= endBlock);

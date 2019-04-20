@@ -77,8 +77,8 @@ namespace MicroCoin.CheckPoints
         {
             try
             {
-                ProcessTransaction(transaction);
-                logger.LogInformation("Processed transaction {0} signer: {1}", transaction.TransactionType, transaction.SignerAccount);
+                //ProcessTransaction(transaction);
+                logger.LogInformation("Process transaction {0} signer: {1}", transaction.TransactionType, transaction.SignerAccount);
             }
             catch (InvalidTransactionException e)
             {
@@ -122,7 +122,7 @@ namespace MicroCoin.CheckPoints
             for (int i = 0; i < 101; i++)
             {
                 var block = GetBlock(i);
-                block.Header = blockChain.GetBlock((uint)i).Header;
+                block.Header = blockChain.GetBlockHeader((uint)i);
                 block.BlockHash = block.CalculateBlockHash(false);
                 hashBuffer.Add(block.BlockHash);
                 modifiedBlocks.Add(block);
@@ -135,6 +135,14 @@ namespace MicroCoin.CheckPoints
             {
                 lock (checkPointLock)
                 {
+                    if (pendingTransactions.Count > 0)
+                    {
+                        if (block.Transactions != null && block.Transactions.Count > 0)
+                        {
+                            pendingTransactions.Clear();
+                            modifiedAccounts.Clear();
+                        }
+                    }
                     if (GetBlock((int)block.Id) != null) return;
                     if (block.Id == 101)
                     {
@@ -146,7 +154,6 @@ namespace MicroCoin.CheckPoints
                     };
                     for (var i = block.Id * 5; i < block.Id * 5 + 5; i++)
                     {
-
                         ulong totalFee = 0;
                         if (block.Transactions != null)
                             totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
@@ -162,17 +169,13 @@ namespace MicroCoin.CheckPoints
                         account.AccountInfo.State = AccountState.Normal;
                         checkPointBlock.Accounts.Add(account);
                     }
-                    logger.LogInformation("Processing #{0} block and {1} transaction", checkPointBlock.Id, block.Transactions?.Count);
                     accumulatedWork += block.Header.CompactTarget;
-
                     checkPointBlock.AccumulatedWork = accumulatedWork;
-
                     foreach (var n in modifiedBlocks)
                     {
                         n.BlockHash = n.CalculateBlockHash(block.Id < 101);
                         hashBuffer[(int)n.Id] = n.BlockHash;
                     }
-
                     Hash sha;
                     if (hashBuffer.Count == 0)
                     {
@@ -201,16 +204,29 @@ namespace MicroCoin.CheckPoints
                             try
                             {
                                 var accounts = ProcessTransaction(item, block);
+                                var mBlocks = new List<CheckPointBlock>();
                                 foreach (var account in accounts)
                                 {
-                                    var mBlock = GetBlock(account.AccountNumber / 5);
-                                    if (mBlock.Header == null)
-                                        mBlock.Header = blockChain.GetBlock((uint)(account.AccountNumber / 5)).Header;
+                                    int id = account.AccountNumber / 5;
+                                    CheckPointBlock mBlock;
+                                    if (mBlocks.Any(p => p.Id == id))
+                                    {
+                                        mBlock = mBlocks.First(p => p.Id == id);
+                                    }
+                                    else
+                                    {
+                                        mBlock = GetBlock(id);
+                                        if (mBlock.Header == null)
+                                            mBlock.Header = blockChain.GetBlockHeader((uint)id);
+                                        mBlocks.Add(mBlock);
+                                    }
                                     int accountIndex = account.AccountNumber % 5;
                                     mBlock.Accounts[accountIndex] = account;
-                                    var newHash = mBlock.CalculateBlockHash(block.Id < 101);
-                                    hashBuffer[(int)mBlock.Id] = newHash;
-                                    mBlock.BlockHash = newHash;
+                                }
+                                foreach(var mBlock in mBlocks)
+                                {
+                                    mBlock.BlockHash = mBlock.CalculateBlockHash(block.Id < 101);
+                                    hashBuffer[(int)mBlock.Id] = mBlock.BlockHash;
                                     if (!modifiedBlocks.Any(p => p.Id == mBlock.Id))
                                     {
                                         modifiedBlocks.Add(mBlock);
@@ -231,8 +247,11 @@ namespace MicroCoin.CheckPoints
                     }
                     if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                     {
+                        logger.LogInformation("Saving {0} blocks and {1} accounts", modifiedBlocks.Count, modifiedAccounts.Count);
                         checkPointStorage.AddBlocks(modifiedBlocks);
-                        checkPointStorage.AddAccounts(modifiedAccounts);
+                        if (modifiedAccounts.Count > 0) 
+                            checkPointStorage.AddAccounts(modifiedAccounts);
+                        logger.LogInformation("Saved {0} blocks and {1} accounts new height: {2}", modifiedBlocks.Count, modifiedAccounts.Count, checkPointBlock.Id);
                         modifiedBlocks.Clear();
                         modifiedAccounts.Clear();
                     }
@@ -254,14 +273,22 @@ namespace MicroCoin.CheckPoints
                 {
                     if (block != null)
                     {
-                        var accounts = transaction.Apply(this);                           
-                        foreach(var account in accounts)
+                        var accounts = transaction.GetModifiedAccounts(this);
+                        foreach (var account in accounts)
                         {
-                            if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
+                            if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
                             {
                                 modifiedAccounts.Add(account);
                             }
                         }
+                        /* var accounts = transaction.Apply(this);                           
+                         foreach(var account in accounts)
+                         {
+                             if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
+                             {
+                                 modifiedAccounts.Add(account);
+                             }
+                         }*/
                         pendingTransactions.Remove(sha);
                     }
                     return modifiedAccounts;
@@ -288,8 +315,7 @@ namespace MicroCoin.CheckPoints
                 }
                 else
                 {
-                    GetAccount(transaction.SignerAccount).TransactionCount += 1;
-                    logger.LogWarning("No validator found for transaction type {0}", transaction.GetType());
+                    throw new InvalidTransactionException("Unknown transaction");
                 }
                 if (block == null)
                 {

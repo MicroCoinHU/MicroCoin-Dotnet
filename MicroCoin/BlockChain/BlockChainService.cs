@@ -101,17 +101,17 @@ namespace MicroCoin.BlockChain
             {
                 if(block.Id <= BlockHeight)
                 {
-                    var myBlock = GetBlock(block.Id);
-                    if (myBlock != null && myBlock.Header.CompactTarget >= block.Header.CompactTarget)
+                    var myBlock = GetBlockHeader(block.Id);
+                    if (myBlock != null && myBlock.CompactTarget >= block.Header.CompactTarget)
                     {
                         continue; // My chain is "longer" or equal, so block is invalid for me, or already included in the chain
                                   // Skip it now, the sender will maintain the orphan chain
                     }
-                    else if (myBlock != null && myBlock.Header.CompactTarget == block.Header.CompactTarget)
+                    else if (myBlock != null && myBlock.CompactTarget == block.Header.CompactTarget)
                     {
                         continue; // Already included
                     }
-                    else if (myBlock != null && myBlock.Header.CompactTarget < block.Header.CompactTarget)
+                    else if (myBlock != null && myBlock.CompactTarget < block.Header.CompactTarget)
                     {
                         // I'm orphan?
                         return false;
@@ -146,7 +146,9 @@ namespace MicroCoin.BlockChain
             var newBlocksOk = false;
             try
             {
+                logger.LogDebug("Processing {0} blocks", blocks.Count());
                 newBlocksOk = ProcessBlocks(blocks);
+                logger.LogDebug("Processed {0} blocks", blocks.Count());
             }
             finally
             {
@@ -184,6 +186,13 @@ namespace MicroCoin.BlockChain
         public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
         {
             return blockChainStorage.GetBlocks(startBlock, endBlock);
+        }
+
+        public BlockHeader GetBlockHeader(uint blockNumber)
+        {
+            var block = blockCache.FirstOrDefault(p => p.Id == blockNumber);
+            if (block != null) return block.Header;
+            return blockChainStorage.GetBlockHeader(blockNumber);
         }
     }
 }

@@ -178,6 +178,18 @@ namespace MicroCoin.Transactions
             }
             return new List<Account>();
         }
+
+        public override IList<Account> GetModifiedAccounts(ICheckPointService checkPointService)
+        {
+            var sender = checkPointService.GetAccount(SignerAccount);
+            var target = checkPointService.GetAccount(TargetAccount);
+            if (TransactionStyle == TransferType.Transaction)
+            {
+                return new List<Account> { sender, target };
+            }
+            var seller = checkPointService.GetAccount(SellerAccount);
+            return new List<Account>() { sender, seller, target };
+        }
     }
 
     public class TransferTransactionValidator : ITransactionValidator<TransferTransaction>

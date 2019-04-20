@@ -171,6 +171,13 @@ namespace MicroCoin.Transactions
             signer.Balance -= Fee;
             return new List<Account> { signer, target };
         }
+
+        public override IList<Account> GetModifiedAccounts(ICheckPointService checkPointService)
+        {
+            var target = checkPointService.GetAccount(TargetAccount);
+            var signer = checkPointService.GetAccount(SignerAccount);
+            return new List<Account> { signer, target };
+        }
     }
 
     public class ListAccountTransactionValidator : ITransactionValidator<ListAccountTransaction>

@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
@@ -27,11 +28,12 @@ namespace MicroCoin
 {
     public static class Params
     {
-        public static ushort ServerPort { get; set; } = 4004;
+        public static ushort ServerPort { get; set; } = 4005;
         public static ByteString GenesisPayload { get; set; } = "(c) Peter Nemeth - Okes rendben okes";
         public static uint NetworkPacketMagic { get; internal set; } = 0x0A043580;
         public static ushort NetworkProtocolVersion { get; set; } = 6;
         public static ushort NetworkProtocolAvailable { get; set; } = 6;
+        public static ECKeyPair NodeKey { get; set; } = ECKeyPair.CreateNew();
         public static string ProgramVersion
         {
             get
@@ -46,6 +48,7 @@ namespace MicroCoin
             new IPEndPoint(IPAddress.Parse("80.211.211.48"), 4004),
             new IPEndPoint(IPAddress.Parse("94.177.237.196"), 4004),
             new IPEndPoint(IPAddress.Parse("5.189.143.76"), 4004),
+            new IPEndPoint(IPAddress.Parse("194.182.64.181"), 4004),
             new IPEndPoint(IPAddress.Parse("80.211.200.121"), 4004)
         };
     }

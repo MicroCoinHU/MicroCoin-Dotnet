@@ -59,5 +59,6 @@ namespace MicroCoin.Transactions
         Hash GetOpHash(uint block);
         Hash SHA();
         IList<Account> Apply(ICheckPointService checkPointService);
+        IList<Account> GetModifiedAccounts(ICheckPointService checkPointService);
     }
 }

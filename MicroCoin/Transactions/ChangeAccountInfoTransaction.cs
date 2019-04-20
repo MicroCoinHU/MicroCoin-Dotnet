@@ -127,6 +127,13 @@ namespace MicroCoin.Transactions
             }
             return new List<Account>() { target, signer };
         }
+
+        public override IList<Account> GetModifiedAccounts(ICheckPointService checkPointService)
+        {
+            var signer = checkPointService.GetAccount(this.SignerAccount);
+            var target = checkPointService.GetAccount(this.TargetAccount);
+            return new List<Account>() { target, signer };
+        }
     }
 
     public class ChangeAccountInfoTransactionValidator : ITransactionValidator<ChangeAccountInfoTransaction>

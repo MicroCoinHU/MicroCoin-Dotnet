@@ -108,11 +108,12 @@ namespace MicroCoin.Transactions
             }
         }
 
-        abstract public IList<Account> Apply(ICheckPointService checkPointService);
-
         public Hash SHA()
         {
             return ServiceLocator.GetService<ICryptoService>().Sha256(GetHash());
         }
+
+        public abstract IList<Account> Apply(ICheckPointService checkPointService);
+        public abstract IList<Account> GetModifiedAccounts(ICheckPointService checkPointService);
     }
 }
