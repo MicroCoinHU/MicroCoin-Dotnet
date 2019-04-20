@@ -43,8 +43,5 @@ namespace MicroCoin.Types
             bw.Write((ushort)b.Length);
             bw.Write(b, 0, b.Length);
         }
-
-
-
     }
 }

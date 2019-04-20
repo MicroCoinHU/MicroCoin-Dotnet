@@ -22,7 +22,6 @@ namespace MicroCoin.Types
 {
     public struct AccountNumber : IEquatable<object>, IEquatable<uint>, IEquatable<string>
     {
-
         private readonly uint _value;
 
         public AccountNumber(string value)
@@ -116,10 +115,10 @@ namespace MicroCoin.Types
         {
             return number._value;
         }
+
         public static implicit operator int(AccountNumber number)
         {
             return (int) number._value;
         }
-
     }
 }

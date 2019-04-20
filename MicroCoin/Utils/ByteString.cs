@@ -84,6 +84,4 @@ namespace MicroCoin.Types
             }
         }
     }
-
-
 }
