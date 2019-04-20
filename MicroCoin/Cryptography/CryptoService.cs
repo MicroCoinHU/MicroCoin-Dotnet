@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // This file is part of MicroCoin - The first hungarian cryptocurrency
 // Copyright (c) 2019 Peter Nemeth
-// Utils.cs - Copyright (c) 2019 Németh Péter
+// CryptoService.cs - Copyright (c) 2019 Németh Péter
 //-----------------------------------------------------------------------
 // MicroCoin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ namespace MicroCoin.Cryptography
     {
         private readonly SHA256 sha = SHA256.Create();
         private readonly object shaLock = new object();
-        private List<ECCurveType> notSupportedECs = new List<ECCurveType>();
+        private readonly List<ECCurveType> notSupportedECs = new List<ECCurveType>();
         public async Task<ECSignature> GenerateSignatureAsync(Hash data, ECKeyPair keyPair) => await Task.Run<ECSignature>(() => GenerateSignature(data, keyPair));
         public CryptoService()
         {

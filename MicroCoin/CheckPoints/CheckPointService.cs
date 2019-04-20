@@ -281,14 +281,6 @@ namespace MicroCoin.CheckPoints
                                 modifiedAccounts.Add(account);
                             }
                         }
-                        /* var accounts = transaction.Apply(this);                           
-                         foreach(var account in accounts)
-                         {
-                             if(!modifiedAccounts.Any(p=>p.AccountNumber == account.AccountNumber))
-                             {
-                                 modifiedAccounts.Add(account);
-                             }
-                         }*/
                         pendingTransactions.Remove(sha);
                     }
                     return modifiedAccounts;
