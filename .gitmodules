@@ -1,0 +1,6 @@
+[submodule "LiteDB"]
+	path = LiteDB
+	url = https://github.com/Pethical/LiteDB.git
+[submodule "zlib"]
+	path = zlib
+	url = https://github.com/zyborg/zlib.net.git
