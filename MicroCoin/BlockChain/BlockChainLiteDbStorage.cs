@@ -33,7 +33,7 @@ namespace MicroCoin.BlockChain
         {
             var mapper = BsonMapper.Global;
             mapper.Entity<ITransaction>().Id(p => p._id);
-#if DEBUG
+
             mapper.Entity<ITransaction>()
                 .Field(p => p.Block, "a")
                 .Field(p => p.Fee, "b")
@@ -101,7 +101,6 @@ namespace MicroCoin.BlockChain
                 .Field(p => p.TransactionCount, "j")
                 .Field(p => p.NewName, "k")
                 .Field(p => p.NewType, "l");
-#endif
 
             trdb.GetCollection<ITransaction>().EnsureIndex(p => p.Block);
         }
