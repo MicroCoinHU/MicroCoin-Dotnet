@@ -1,2 +1,2 @@
-# MicroCoin-Dotnet
-MicroCoin node dotnet implementation, the next generation MicroCoin
+# MicroCoin .Net
+MicroCoin node .NET implementation, the next generation MicroCoin
