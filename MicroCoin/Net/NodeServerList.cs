@@ -28,11 +28,11 @@ namespace MicroCoin.Net
     public class NodeServerList : ConcurrentDictionary<string, Node>, IDisposable
     {
         internal void SaveToStream(Stream s)
-        {            
+        {
             using (BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true))
             {
                 bw.Write((uint)Count);
-                foreach(var item in this)
+                foreach (var item in this)
                 {
                     item.Value.IP.SaveToStream(bw);
                     bw.Write(item.Value.Port);
@@ -53,7 +53,7 @@ namespace MicroCoin.Net
             using (BinaryReader br = new BinaryReader(stream, Encoding.ASCII, true))
             {
                 uint serverCount = br.ReadUInt32();
-                for(int i = 0; i < serverCount; i++)
+                for (int i = 0; i < serverCount; i++)
                 {
                     Node server = new Node();
                     ushort iplen = br.ReadUInt16();
@@ -97,4 +97,4 @@ namespace MicroCoin.Net
             Clear();
         }
     }
-    }
+}

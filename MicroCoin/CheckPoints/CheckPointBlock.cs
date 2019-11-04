@@ -112,7 +112,7 @@ namespace MicroCoin.CheckPoints
                 using (BinaryWriter bw = new BinaryWriter(ms, Encoding.ASCII, true))
                 {
                     SaveToStream(bw, false, proto1);
-                    ms.Position = 0;                    
+                    ms.Position = 0;
                     using (SHA256 sha = SHA256.Create())
                     {
                         return sha.ComputeHash(ms);

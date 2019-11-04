@@ -22,6 +22,7 @@ namespace MicroCoin.Types
 {
     public struct AccountNumber : IEquatable<object>, IEquatable<uint>, IEquatable<string>
     {
+
         private readonly uint _value;
 
         public AccountNumber(string value)

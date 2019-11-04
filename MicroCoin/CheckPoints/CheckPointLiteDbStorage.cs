@@ -22,6 +22,7 @@ using MicroCoin.Chain;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -29,12 +30,16 @@ namespace MicroCoin.CheckPoints
 {
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
-        private readonly LiteDatabase accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
-        private readonly LiteDatabase checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
+        private LiteDatabase db;
+        private LiteDatabase accountdb;
+        private LiteDatabase checkpointdb;
 
         public CheckPointLiteDbStorage()
         {
+            db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");
+            accountdb = new LiteDatabase("Filename=accounts.db; Journal=false; Async=true");
+            checkpointdb = new LiteDatabase("Filename=checkpoints.db; Journal=false; Async=true");
+
             var mapper = BsonMapper.Global;
             mapper.Entity<CheckPointBlock>()
                 .Field(p => p.AccumulatedWork, "b")
@@ -96,6 +101,7 @@ namespace MicroCoin.CheckPoints
 
         public void AddBlock(CheckPointBlock block)
         {
+//            var id = checkpointdb.GetCollection<CheckPointBlock>().Max(p => p.Id).AsInt64;
             accountdb.GetCollection<Account>().Upsert(block.Accounts);
             checkpointdb.GetCollection<CheckPointBlock>().Upsert(block);
         }

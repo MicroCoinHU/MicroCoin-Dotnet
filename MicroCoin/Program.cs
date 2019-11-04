@@ -111,10 +111,11 @@ namespace MicroCoin
 
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole")
             {
-                UseDefaultRowHighlightingRules = true
+                UseDefaultRowHighlightingRules = true,
+                DetectConsoleAvailable = true                
             };
+            
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
-
             LogManager.Configuration = config;
 
             ServiceLocator.ServiceProvider = new ServiceCollection()
@@ -194,6 +195,7 @@ namespace MicroCoin
                 throw new Exception("NO FIX SEEDS FOUND");
             }
             var bc = ServiceLocator.GetService<IBlockChain>();
+            
             var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
             var error = false;
             do
@@ -233,7 +235,7 @@ namespace MicroCoin
                                 foreach (var block in blocks.OrderByDescending(p => p.Id))
                                 {
                                     var myBlock = bc.GetBlock(block.Id);
-                                    if (block.Header.CompactTarget == myBlock.Header.CompactTarget)
+                                    if (myBlock!=null && (block.Header.CompactTarget == myBlock.Header.CompactTarget))
                                     {
                                         // On baseblock
                                     }

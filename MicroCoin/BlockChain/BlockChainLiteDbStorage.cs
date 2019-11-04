@@ -129,7 +129,6 @@ namespace MicroCoin.BlockChain
 
         public async Task AddBlocksAsync(IEnumerable<Block> blocks)
         {
-            
             var t1 = Task.Factory.StartNew(() =>
             {
                 db.GetCollection<BlockHeader>().InsertBulk(blocks.Select(p => p.Header));
@@ -144,6 +143,7 @@ namespace MicroCoin.BlockChain
         public void DeleteBlocks(uint from)
         {
             db.GetCollection<BlockHeader>().Delete(p => p.Id >= from);
+            trdb.GetCollection<ITransaction>().Delete(p => p.Block >= from);
         }
 
         public void Dispose()
