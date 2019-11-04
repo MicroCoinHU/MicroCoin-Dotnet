@@ -30,8 +30,6 @@ using Microsoft.Extensions.Logging;
 
 namespace MicroCoin.Net
 {
-
-
     public class Discovery : IDiscovery
     {
         private readonly IPeerManager peerManager;
@@ -87,13 +85,13 @@ namespace MicroCoin.Net
                     }
                     catch (Exception e)
                     {
-                        logger.LogWarning("{0} dead ({1})", server.Address, e.Message);
+                        logger.LogTrace("{0} dead ({1})", server.Address, e.Message);
                         cl.Dispose();
                     }
                 }
                 else
                 {
-                    logger.LogWarning("{0} dead", server.Address);
+                    logger.LogTrace("{0} dead", server.Address);
                     cl.Dispose();
                 }
             }
@@ -130,7 +128,7 @@ namespace MicroCoin.Net
                     var nodesToConnect = peerManager.GetNodes().Where(p => p.Connected == false && p.LastConnectionAttempt < DateTime.Now.Subtract(TimeSpan.FromSeconds(300)));
                     foreach (var elem in nodesToConnect)
                     {
-                        logger.LogDebug("Discovering peer: {0}", elem.EndPoint);
+                        logger.LogTrace("Discovering peer: {0}", elem.EndPoint);
                         elem.LastConnectionAttempt = DateTime.Now;
                         var client = ServiceLocator.GetService<INetClient>();
                         client.Connect(elem);
@@ -142,7 +140,7 @@ namespace MicroCoin.Net
                         }
                         else
                         {
-                            logger.LogWarning("Peer {0} died", elem.EndPoint);
+                            logger.LogTrace("Peer {0} died", elem.EndPoint);
                             elem.ConnectionAttemps += 1;
                             elem.NetClient?.Dispose();
                             elem.NetClient = null;

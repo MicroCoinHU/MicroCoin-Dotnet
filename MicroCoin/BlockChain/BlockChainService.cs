@@ -57,6 +57,7 @@ namespace MicroCoin.BlockChain
             this.blockChainStorage = blockChainStorage;
             this.eventAggregator = eventAggregator;
             this.logger = logger;
+            logger.LogInformation("Loadaded blockchain. BlockHeight: {0}", blockChainStorage.BlockHeight);
         }
 
         public void AddBlock(Block block)
@@ -83,6 +84,10 @@ namespace MicroCoin.BlockChain
         {
             uint badBlockNumber = uint.MaxValue;
             object blockLock = new object();
+
+            if (blocks.Min(p=>p.Id) > BlockHeight + 1)
+                return false;
+
             Parallel.ForEach(blocks, (block, state) =>
             {
                 if (!block.Header.IsValid())
@@ -113,12 +118,20 @@ namespace MicroCoin.BlockChain
                     }
                     else if (myBlock != null && myBlock.CompactTarget < block.Header.CompactTarget)
                     {
+                        throw new Exception("I'm orphan");
                         // I'm orphan?
                         return false;
                     }
                 }
-                eventAggregator.GetEvent<BlocksAdded>().Publish(block);
-                blockCache.Add(block);
+                try
+                {
+                    eventAggregator.GetEvent<BlocksAdded>().Publish(block);
+                    blockCache.Add(block);
+                }
+                catch (Exception e) {
+                    blockCache.Clear();
+                    return false;
+                }
             }
             return true;
         }

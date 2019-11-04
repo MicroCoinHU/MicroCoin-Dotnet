@@ -24,11 +24,9 @@ using MicroCoin.Types;
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System.Diagnostics;
-using System.Collections.Concurrent;
 using MicroCoin.Handlers;
 using MicroCoin.Cryptography;
 using System.IO;
@@ -174,7 +172,7 @@ namespace MicroCoin.CheckPoints
                     foreach (var n in modifiedBlocks)
                     {
                         n.BlockHash = n.CalculateBlockHash(block.Id < 101);
-                        hashBuffer[(int)n.Id] = n.BlockHash;
+                        hashBuffer[(int)n.Id] = n.BlockHash;                        
                     }
                     Hash sha;
                     if (hashBuffer.Count == 0)
@@ -182,11 +180,11 @@ namespace MicroCoin.CheckPoints
                         sha = cryptoService.Sha256(Params.GenesisPayload);
                     }
                     else
-                    {
+                    {                        
                         using (var ms = new MemoryStream(hashBuffer.Count * 32))
-                        {
+                        {                            
                             foreach (var h in hashBuffer)
-                            {
+                            {                                
                                 ms.Write(h, 0, 32);
                             }
                             sha = cryptoService.Sha256(ms);
@@ -195,6 +193,14 @@ namespace MicroCoin.CheckPoints
 
                     if (sha != checkPointBlock.Header.CheckPointHash)
                     {
+                        logger.LogWarning("CheckPoint hash mismatch {0}", block.Id);
+                        modifiedBlocks.Clear();
+                        modifiedAccounts.Clear();
+                        uint bl = (uint)(blockChain.BlockHeight / 100) * 100;
+                        blockChain.DeleteBlocks(bl);
+                        hashBuffer.Clear();
+                        LoadFromBlockChain();
+                        logger.LogWarning("I'm orphan chain. Need to download new blockchain");                        
                         throw new Exception("Invalid checkpoint hash");
                     }
                     if (block.Transactions != null)
@@ -255,11 +261,16 @@ namespace MicroCoin.CheckPoints
                         modifiedBlocks.Clear();
                         modifiedAccounts.Clear();
                     }
+                    else
+                    {
+                        logger.LogInformation("Added block {0} to checkpoints, block height: {1}", block.Id, blockChain.BlockHeight);
+                    }
                 }
             }
             catch(Exception e)
             {
-                Debug.Fail(e.StackTrace);
+                logger.LogError(e, e.Message);
+                throw e;
             }
         }
 
