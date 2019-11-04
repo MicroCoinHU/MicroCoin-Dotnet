@@ -45,6 +45,7 @@ namespace MicroCoin
         public static ICollection<IPEndPoint> FixedSeedServers { get; set; } = new HashSet<IPEndPoint>()
         {
             new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4004),
+            new IPEndPoint(IPAddress.Parse("194.182.64.181"), 4004),
             new IPEndPoint(IPAddress.Parse("80.211.211.48"), 4004),
             new IPEndPoint(IPAddress.Parse("94.177.237.196"), 4004),
             new IPEndPoint(IPAddress.Parse("5.189.143.76"), 4004),
