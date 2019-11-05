@@ -16,16 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.Common;
-using MicroCoin.Transactions;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MicroCoin.BlockChain
@@ -79,7 +75,6 @@ namespace MicroCoin.BlockChain
             }
         }
 
-
         protected bool ProcessBlocks(IEnumerable<Block> blocks)
         {
             uint badBlockNumber = uint.MaxValue;
@@ -119,8 +114,6 @@ namespace MicroCoin.BlockChain
                     else if (myBlock != null && myBlock.CompactTarget < block.Header.CompactTarget)
                     {
                         throw new Exception("I'm orphan");
-                        // I'm orphan?
-                        return false;
                     }
                 }
                 try
@@ -159,9 +152,9 @@ namespace MicroCoin.BlockChain
             var newBlocksOk = false;
             try
             {
-                logger.LogDebug("Processing {0} blocks", blocks.Count());
+                logger.LogTrace("Processing {0} blocks", blocks.Count());
                 newBlocksOk = ProcessBlocks(blocks);
-                logger.LogDebug("Processed {0} blocks", blocks.Count());
+                logger.LogTrace("Processed {0} blocks", blocks.Count());
             }
             finally
             {

@@ -226,8 +226,7 @@ namespace MicroCoin.CheckPoints
                                             mBlock.Header = blockChain.GetBlockHeader((uint)id);
                                         mBlocks.Add(mBlock);
                                     }
-                                    int accountIndex = account.AccountNumber % 5;
-                                    mBlock.Accounts[accountIndex] = account;
+                                    mBlock.Accounts[account.AccountNumber % 5] = account;
                                 }
                                 foreach(var mBlock in mBlocks)
                                 {
@@ -247,23 +246,26 @@ namespace MicroCoin.CheckPoints
                     }
                     checkPointBlock.BlockHash = checkPointBlock.CalculateBlockHash(block.Id < 101);
                     hashBuffer.Add(checkPointBlock.BlockHash);
+                    
                     if (!modifiedBlocks.Any(p => p.Id == checkPointBlock.Id))
                     {
                         modifiedBlocks.Add(checkPointBlock);
                     }
+                    
                     if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                     {
-                        logger.LogInformation("Saving {0} blocks and {1} accounts", modifiedBlocks.Count, modifiedAccounts.Count);
+                        checkPointStorage.SaveState();
+                        logger.LogInformation("Saving {0} blocks and {1} modified accounts", modifiedBlocks.Count, modifiedAccounts.Count);
                         checkPointStorage.AddBlocks(modifiedBlocks);
                         if (modifiedAccounts.Count > 0) 
                             checkPointStorage.AddAccounts(modifiedAccounts);
-                        logger.LogInformation("Saved {0} blocks and {1} accounts new height: {2}", modifiedBlocks.Count, modifiedAccounts.Count, checkPointBlock.Id);
+                        logger.LogInformation("Saved {0} blocks and {1} modified accounts. New checkpoint height: {2}", modifiedBlocks.Count, modifiedAccounts.Count, checkPointBlock.Id);
                         modifiedBlocks.Clear();
                         modifiedAccounts.Clear();
                     }
                     else
                     {
-                        logger.LogInformation("Added block {0} to checkpoints, block height: {1}", block.Id, blockChain.BlockHeight);
+                        //logger.LogTrace("Added block {0} to checkpoints, block height: {1}", block.Id, blockChain.BlockHeight);
                     }
                 }
             }

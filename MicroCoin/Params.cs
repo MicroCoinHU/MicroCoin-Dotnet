@@ -20,9 +20,9 @@ using MicroCoin.Cryptography;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Reflection;
-using System.Text;
 
 namespace MicroCoin
 {
@@ -34,6 +34,9 @@ namespace MicroCoin
         public static ushort NetworkProtocolVersion { get; set; } = 6;
         public static ushort NetworkProtocolAvailable { get; set; } = 6;
         public static ECKeyPair NodeKey { get; set; } = ECKeyPair.CreateNew();
+        public static string BaseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MicroCoin.NET");
+        public static string DataFolder => Path.Combine(BaseFolder, "Data");
+        public static string LogFolder => Path.Combine(BaseFolder, "Log");
         public static string ProgramVersion
         {
             get

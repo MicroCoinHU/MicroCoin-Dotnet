@@ -101,7 +101,7 @@ namespace MicroCoin.Net
                 if (Started) throw new InvalidOperationException("Client already started");
                 if (!IsConnected) throw new InvalidOperationException("Not connected");
             }
-            logger.LogDebug("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
+            logger.LogTrace("Sending {0} {1} to {2}", packet.Header.Operation, packet.Header.RequestType, Node.EndPoint.ToString());
             using (var sendStream = new MemoryStream())
             {
                 packet.Header.DataLength = packet.RawData.Length;
@@ -141,7 +141,7 @@ namespace MicroCoin.Net
                                 br.ReadBytes(header.DataLength); // Drop package
                                 continue;
                             }
-                            logger.LogInformation("Received package {0} {1}", header.Operation, header.RequestType);
+                            logger.LogDebug("Received network packet: {0} {1} from {2}", header.Operation, header.RequestType, Node.EndPoint);
                             return new NetworkPacket(header)
                             {
                                 Node = Node,

@@ -41,6 +41,11 @@ namespace MicroCoin.Protocol
             Blocks = new List<Block>(blocks);
         }
 
+        public override string ToString()
+        {
+            return string.Format("Blocks response with {0} blocks", Blocks.Count);
+        }
+
         public void SaveToStream(Stream stream)
         {
             using (BinaryWriter bw = new BinaryWriter(stream, Encoding.ASCII, true))

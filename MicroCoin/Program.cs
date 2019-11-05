@@ -36,10 +36,6 @@ using NLog.Extensions.Logging;
 using Microsoft.Extensions.Logging;
 using LogLevel = NLog.LogLevel;
 using MicroCoin.Transactions;
-using System.Diagnostics;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace MicroCoin
 {
@@ -48,6 +44,7 @@ namespace MicroCoin
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+            
             var mapper = BsonMapper.Global;
             mapper.ResolveMember = (type, memberInfo, memberMapper) =>
             {

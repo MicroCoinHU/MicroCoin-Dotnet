@@ -19,6 +19,7 @@
 using LiteDB;
 using MicroCoin.Transactions;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -26,11 +27,19 @@ namespace MicroCoin.BlockChain
 {
     public class BlockChainLiteDbStorage : IBlockChainStorage
     {
-        private readonly LiteDatabase db = new LiteDatabase("Filename=blockchain.db; Journal=false; Async=true");        
-        private readonly LiteDatabase trdb = new LiteDatabase("Filename=transactions.db; Journal=false; Async=true");        
+        private readonly LiteDatabase db;
+        private readonly LiteDatabase trdb;        
 
         public BlockChainLiteDbStorage()
         {
+            if (!Directory.Exists(Params.DataFolder))
+            {
+                Directory.CreateDirectory(Params.DataFolder);
+            }
+
+            db = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "blockchain.mcc") + "; Journal=false; Async=true");
+            trdb = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "transactions.mcc") + "; Journal=false; Async=true");
+
             var mapper = BsonMapper.Global;
             mapper.Entity<ITransaction>().Id(p => p._id);
 

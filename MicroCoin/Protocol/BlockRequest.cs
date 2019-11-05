@@ -36,6 +36,11 @@ namespace MicroCoin.Protocol
         {
         }
 
+        public override string ToString()
+        {
+            return string.Format("Block request from block {0} to {1}", StartBlock, EndBlock);
+        }
+
         public void LoadFromStream(Stream s)
         {
             using (BinaryReader br = new BinaryReader(s, Encoding.ASCII, true)) {
