@@ -19,9 +19,12 @@
 using MicroCoin.Net;
 using MicroCoin.Protocol;
 using MicroCoin.Transactions;
+using MicroCoin.Types;
 using Prism.Events;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MicroCoin.Handlers
@@ -30,11 +33,14 @@ namespace MicroCoin.Handlers
     public class NewTransactionHandler : IHandler<NewTransactionRequest>
     {
         private readonly IEventAggregator eventAggregator;
+        private readonly IPeerManager peerManager;
         private readonly object handlerLock = new object();
+        private readonly ConcurrentBag<Hash> processedTransactions = new ConcurrentBag<Hash>();
 
-        public NewTransactionHandler(IEventAggregator eventAggregator)
+        public NewTransactionHandler(IEventAggregator eventAggregator, IPeerManager peerManager)
         {
             this.eventAggregator = eventAggregator;
+            this.peerManager = peerManager;
         }
 
         public void Handle(NetworkPacket packet)
@@ -42,10 +48,23 @@ namespace MicroCoin.Handlers
             lock (handlerLock)
             {
                 var request = packet.Payload<NewTransactionRequest>();
+                if (processedTransactions.Count(p => p.Equals(request.Transactions.First().SHA())) > 0)
+                {
+                    return;
+                }
                 foreach (var transaction in request.Transactions)
                 {
                     eventAggregator.GetEvent<NewTransaction>().Publish(transaction);
                 }
+                foreach (var peer in peerManager.GetNodes().Where(p => p.Connected))
+                {
+                    if (!peer.EndPoint.Equals(packet.Node.EndPoint))
+                    {
+                        peer.NetClient.Send(new NetworkPacket<NewTransactionRequest>(new NewTransactionRequest(request.Transactions.ToArray())));                        
+                    }
+                }
+                foreach(var transaction in request.Transactions)
+                    processedTransactions.Add(transaction.SHA());
             }
         }
     }
