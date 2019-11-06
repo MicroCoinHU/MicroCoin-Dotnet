@@ -16,16 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using LiteDB;
 using MicroCoin.BlockChain;
-using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
-using MicroCoin.Common;
 using MicroCoin.Cryptography;
 using MicroCoin.Handlers;
 using MicroCoin.Net;
 using MicroCoin.Protocol;
-using MicroCoin.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Prism.Events;
 using System;
@@ -36,6 +32,10 @@ using NLog.Extensions.Logging;
 using Microsoft.Extensions.Logging;
 using LogLevel = NLog.LogLevel;
 using MicroCoin.Transactions;
+using MicroCoin.Modularization;
+using MicroCoin.KeyStore;
+using MicroCoin.Net.Events;
+using MicroCoin.Transactions.Validators;
 
 namespace MicroCoin
 {
@@ -44,66 +44,6 @@ namespace MicroCoin
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            
-            var mapper = BsonMapper.Global;
-            mapper.ResolveMember = (type, memberInfo, memberMapper) =>
-            {
-                if (memberMapper.DataType == typeof(ECCurveType))
-                {
-                    memberMapper.Serialize = (obj, m) => new BsonValue((int)((ushort)obj));
-                    memberMapper.Deserialize = (value, m) => (ECCurveType)value.AsInt32;
-                }
-                else if (memberMapper.DataType == typeof(AccountState))
-                {
-                    memberMapper.Serialize = (obj, m) => new BsonValue((int)obj);
-                    memberMapper.Deserialize = (value, m) => (AccountState)value.AsInt32;
-                }
-                else if (memberMapper.DataType == typeof(TransactionType))
-                {
-                    memberMapper.Serialize = (obj, m) => new BsonValue((int)(uint)obj);
-                    memberMapper.Deserialize = (value, m) => (TransactionType)value.AsInt32;
-                }
-                else if (memberMapper.DataType == typeof(TransferTransaction.TransferType))
-                {
-                    memberMapper.Serialize = (obj, m) => new BsonValue((int)(byte)obj);
-                    memberMapper.Deserialize = (value, m) => (TransferTransaction.TransferType)value.AsInt32;
-                }
-            };
-
-            mapper.RegisterType<Currency>(p => (long)(ulong)p, p => (Currency)p.AsInt64);
-            mapper.RegisterType<Hash>(p => (byte[])p, p => p.AsBinary);
-            mapper.RegisterType<ByteString>(p => (byte[])p, p => p.AsBinary);
-            mapper.RegisterType<Timestamp>(p => (int)p, p => (Timestamp)p.AsInt32);
-            mapper.RegisterType<AccountNumber>(p => (int)p, p => new AccountNumber((uint)p.AsInt32));            
-
-            mapper.Entity<ECKeyPair>()
-                .Field(p => p.CurveType, "ct")
-                .Ignore(p => p.ECParameters)
-                .Ignore(p => p.PublicKey)
-                .Ignore(p => p.D)
-                .Ignore(p => p.PrivateKey)
-                .Ignore(p => p.Name);
-
-            mapper.Entity<ECSignature>()
-                .Ignore(p => p.Signature)            
-                .Ignore(p => p.SigCompat);
-
-            mapper.Entity<BlockHeader>()
-                .Field(p => p.AccountKey, "a")
-                .Field(p => p.AvailableProtocol, "b")
-                .Field(p => p.BlockNumber, "c")
-                .Field(p => p.BlockSignature, "d")
-                .Field(p => p.CheckPointHash, "e")
-                .Field(p => p.CompactTarget, "f")
-                .Field(p => p.Fee, "g")
-                .Field(p => p.Nonce, "h")
-                .Field(p => p.Payload, "i")
-                .Field(p => p.ProofOfWork, "j")
-                .Field(p => p.ProtocolVersion, "k")
-                .Field(p => p.Reward, "l")
-                .Field(p => p.Timestamp, "m")
-                .Field(p => p.TransactionHash, "n");
-
             var config = new NLog.Config.LoggingConfiguration();
 
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole")
@@ -111,15 +51,16 @@ namespace MicroCoin
                 UseDefaultRowHighlightingRules = true,
                 DetectConsoleAvailable = true                
             };
-            
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logconsole);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             LogManager.Configuration = config;
+            
+            ServiceCollection serviceCollection = new ServiceCollection();
+            ModuleManager moduleManager = new ModuleManager();
+            moduleManager.LoadModules(serviceCollection);
 
-            ServiceLocator.ServiceProvider = new ServiceCollection()
+            ServiceLocator.ServiceProvider = serviceCollection
                 .AddSingleton<IEventAggregator, EventAggregator>()
-                .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>()
                 .AddSingleton<IBlockChain, BlockChainService>()
-                .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
                 .AddSingleton<ICheckPointService, CheckPointService>()
                 .AddSingleton<IPeerManager, PeerManager>()
                 .AddSingleton<ICryptoService, CryptoService>()
@@ -130,26 +71,28 @@ namespace MicroCoin
                 .AddSingleton<IHandler<NewBlockRequest>, BlocksHandler>()
                 .AddSingleton<IHandler<CheckPointResponse>, CheckPointHandler>()
                 .AddSingleton<IDiscovery, Discovery>()
-                .AddTransient<INetClient, NetClient>()
-                .AddTransient<INetServer, NetServer>()
                 .AddSingleton<ITransactionValidator<TransferTransaction>, TransferTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ChangeKeyTransaction>, ChangeKeyTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ChangeAccountInfoTransaction>, ChangeAccountInfoTransactionValidator>()
                 .AddSingleton<ITransactionValidator<ListAccountTransaction>, ListAccountTransactionValidator>()
                 .AddLogging(builder =>
                 {
-                    builder.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-                   
-                    builder.AddNLog(new NLogProviderOptions()
-                    {
-                        CaptureMessageTemplates = true,
-                        CaptureMessageProperties = true,                       
-                    });
+                    builder
+                        .SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace)                   
+                        .AddNLog(new NLogProviderOptions()
+                        {
+                            CaptureMessageTemplates = true,
+                            CaptureMessageProperties = true
+                        });
                 })
                 .BuildServiceProvider();
-
-            ServiceLocator.GetService<ICheckPointService>().LoadFromBlockChain();
-
+            
+            var keyStore = ServiceLocator.GetService<IKeyStore>();
+            if (keyStore.Count() == 0)
+            {
+                keyStore.Add(ECKeyPair.CreateNew());
+            }
+            ServiceLocator.GetService<ICheckPointService>().LoadFromBlockChain();             
             ServiceLocator
                 .GetService<IEventAggregator>()
                 .GetEvent<NetworkEvent>()
@@ -192,7 +135,6 @@ namespace MicroCoin
                 throw new Exception("NO FIX SEEDS FOUND");
             }
             var bc = ServiceLocator.GetService<IBlockChain>();
-            
             var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
             var error = false;
             do
