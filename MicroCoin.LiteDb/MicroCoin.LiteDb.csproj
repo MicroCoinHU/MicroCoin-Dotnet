@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputPath></OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LiteDB\LiteDB\LiteDB.csproj" />
+    <ProjectReference Include="..\MicroCoin.Common\MicroCoin.Common.csproj" />
+    <ProjectReference Include="..\MicroCoin\MicroCoin.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y $(OutDir)* ..\MicroCoin.Console\bin\$(ConfigurationName)\netcoreapp3.0\" />
+  </Target>
+
+</Project>
