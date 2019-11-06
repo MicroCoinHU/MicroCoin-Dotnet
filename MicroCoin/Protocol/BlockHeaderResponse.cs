@@ -16,12 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.BlockChain;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using MicroCoin.Common;
-
 namespace MicroCoin.Protocol
 {
     public class BlockHeaderResponse : BlockResponse

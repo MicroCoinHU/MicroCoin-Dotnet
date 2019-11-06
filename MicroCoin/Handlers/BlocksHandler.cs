@@ -20,8 +20,6 @@ using MicroCoin.Net;
 using MicroCoin.Protocol;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using MicroCoin.BlockChain;
 using System.Linq;
 using System.Collections.Concurrent;

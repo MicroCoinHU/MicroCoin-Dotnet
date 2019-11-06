@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.Cryptography;
-using MicroCoin.Modularization;
 using MicroCoin.Transactions;
 using System.Collections.Generic;
 using System.IO;
@@ -34,30 +32,6 @@ namespace MicroCoin.BlockChain
         public Block()
         {
             Header = new BlockHeader();
-        }
-
-        public static Block GenesisBlock()
-        {
-            return new Block
-            {
-                Header = new BlockHeader
-                {
-                    AccountKey = null,
-                    AvailableProtocol = 0,
-                    BlockNumber = 0,
-                    CompactTarget = 0,
-                    Fee = 0,
-                    Nonce = 0,
-                    TransactionHash = new byte[0],
-                    Payload = new byte[0],
-                    ProofOfWork = new byte[0],
-                    ProtocolVersion = 0,
-                    Reward = 0,
-                    CheckPointHash = ServiceLocator.GetService<ICryptoService>().Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
-                    BlockSignature = 3,
-                    Timestamp = 0
-                }
-            };
         }
 
         public Block(Stream stream) : this()
@@ -80,7 +54,7 @@ namespace MicroCoin.BlockChain
                 for (var i = 0; i < TransactionCount; i++)
                 {
                     var transactionType = (TransactionType)br.ReadUInt32();
-                    ITransaction t = TransactionFactory.FromType(transactionType);
+                    ITransaction t = TransactionFactory.CreateFromType(transactionType);
                     t.TransactionType = transactionType;
                     t.LoadFromStream(stream);
                     t.Block = Header.BlockNumber;

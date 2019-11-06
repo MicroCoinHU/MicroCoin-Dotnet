@@ -17,8 +17,6 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Text;
 using LiteDB;
 using MicroCoin.BlockChain;
 using MicroCoin.Chain;
@@ -108,9 +106,13 @@ namespace MicroCoin.LiteDb
                 .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>();
         }
 
-        public void InitModule()
+        public void InitModule(IServiceProvider serviceProvider)
         {
-            
+            var keyStore = serviceProvider.GetService<IKeyStore>();
+            if (keyStore.Count() == 0)
+            {
+                keyStore.Add(ECKeyPair.CreateNew());
+            }
         }
     }
 }

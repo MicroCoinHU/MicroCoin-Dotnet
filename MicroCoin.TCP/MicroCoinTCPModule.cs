@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using System;
 using MicroCoin.Modularization;
 using MicroCoin.Net;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,9 +27,8 @@ namespace MicroCoin.TCP
     {
         public string Name => "MicroCoin TCP/IP networking module";
 
-        public void InitModule()
+        public void InitModule(IServiceProvider serviceProvider)
         {
-            
         }
 
         public void RegisterModule(ServiceCollection serviceCollection)

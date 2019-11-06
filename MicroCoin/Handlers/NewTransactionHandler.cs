@@ -21,11 +21,8 @@ using MicroCoin.Protocol;
 using MicroCoin.Transactions;
 using MicroCoin.Types;
 using Prism.Events;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace MicroCoin.Handlers
 {

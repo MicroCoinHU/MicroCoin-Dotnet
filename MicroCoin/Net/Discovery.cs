@@ -17,8 +17,6 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using System.Threading;
 using MicroCoin.Protocol;
@@ -32,13 +30,17 @@ namespace MicroCoin.Net
     public class Discovery : IDiscovery
     {
         private readonly IPeerManager peerManager;
+        private readonly IBlockFactory blockFactory;
+        private readonly IBlockChain blockChain;
         private readonly ILogger<Discovery> logger;
         private Thread discoveryThread;
 
-        public Discovery(IPeerManager peerManager, ILogger<Discovery> logger)
+        public Discovery(IPeerManager peerManager, ILogger<Discovery> logger, IBlockChain blockChain, IBlockFactory blockFactory)
         {
             this.peerManager = peerManager;
             this.logger = logger;
+            this.blockChain = blockChain;
+            this.blockFactory = blockFactory;
             discoveryThread = new Thread(Discover)
             {
                 Name = "discovery"
@@ -58,7 +60,7 @@ namespace MicroCoin.Net
 
         public async Task<bool> DiscoverFixedSeedServers()
         {
-            HelloRequest request = HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>());
+            HelloRequest request = HelloRequest.NewRequest(blockChain, blockFactory);
             NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
             logger.LogTrace("Discovering fixed servers");
             foreach (var server in Params.FixedSeedServers)
@@ -120,7 +122,7 @@ namespace MicroCoin.Net
                     foreach (var node in needHello)
                     {
                         if (!node.NetClient.Started) node.NetClient.Start();
-                        HelloRequest request = HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>());
+                        HelloRequest request = HelloRequest.NewRequest(blockChain, blockFactory);
                         NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
                         node.NetClient.Send(networkPacket);
                     }

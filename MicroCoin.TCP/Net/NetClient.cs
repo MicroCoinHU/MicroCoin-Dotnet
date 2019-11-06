@@ -23,7 +23,6 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using MicroCoin.Common;
 using MicroCoin.Types;
 using System.Net;
 using System.Threading.Tasks;

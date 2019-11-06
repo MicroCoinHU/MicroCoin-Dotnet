@@ -42,7 +42,7 @@ namespace MicroCoin.Protocol
         public HelloRequest() {
         }
 
-        public static HelloRequest NewRequest(IBlockChain blockChain)
+        public static HelloRequest NewRequest(IBlockChain blockChain, IBlockFactory blockFactory)
         {            
             return new HelloRequest()
             {
@@ -51,7 +51,7 @@ namespace MicroCoin.Protocol
                 ServerPort = Params.ServerPort,
                 Timestamp = DateTime.UtcNow,
                 Version = Params.ProgramVersion,
-                Block = blockChain.BlockHeight > 0 ? blockChain.GetBlock((uint)blockChain.BlockHeight) : Block.GenesisBlock(),
+                Block = blockChain.BlockHeight > 0 ? blockChain.GetBlock((uint)blockChain.BlockHeight) : blockFactory.GenesisBlock(),
                 WorkSum = 0
             };
         }

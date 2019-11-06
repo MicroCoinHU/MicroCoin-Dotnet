@@ -17,9 +17,6 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using MicroCoin.BlockChain;
-using MicroCoin.CheckPoints;
-using MicroCoin.Cryptography;
-using MicroCoin.Handlers;
 using MicroCoin.Net;
 using MicroCoin.Protocol;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,11 +28,7 @@ using NLog;
 using NLog.Extensions.Logging;
 using Microsoft.Extensions.Logging;
 using LogLevel = NLog.LogLevel;
-using MicroCoin.Transactions;
 using MicroCoin.Modularization;
-using MicroCoin.KeyStore;
-using MicroCoin.Net.Events;
-using MicroCoin.Transactions.Validators;
 
 namespace MicroCoin
 {
@@ -44,41 +37,26 @@ namespace MicroCoin
         static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            var config = new NLog.Config.LoggingConfiguration();
 
             var logconsole = new NLog.Targets.ColoredConsoleTarget("logconsole")
             {
                 UseDefaultRowHighlightingRules = true,
-                DetectConsoleAvailable = true                
+                DetectConsoleAvailable = true
             };
+            var config = new NLog.Config.LoggingConfiguration();
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logconsole);
             LogManager.Configuration = config;
-            
+
             ServiceCollection serviceCollection = new ServiceCollection();
             ModuleManager moduleManager = new ModuleManager();
             moduleManager.LoadModules(serviceCollection);
 
             ServiceLocator.ServiceProvider = serviceCollection
                 .AddSingleton<IEventAggregator, EventAggregator>()
-                .AddSingleton<IBlockChain, BlockChainService>()
-                .AddSingleton<ICheckPointService, CheckPointService>()
-                .AddSingleton<IPeerManager, PeerManager>()
-                .AddSingleton<ICryptoService, CryptoService>()
-                .AddSingleton<IHandler<NewTransactionRequest>, NewTransactionHandler>()
-                .AddSingleton<IHandler<HelloRequest>, HelloHandler>()
-                .AddSingleton<IHandler<HelloResponse>, HelloHandler>()
-                .AddSingleton<IHandler<BlockResponse>, BlocksHandler>()
-                .AddSingleton<IHandler<NewBlockRequest>, BlocksHandler>()
-                .AddSingleton<IHandler<CheckPointResponse>, CheckPointHandler>()
-                .AddSingleton<IDiscovery, Discovery>()
-                .AddSingleton<ITransactionValidator<TransferTransaction>, TransferTransactionValidator>()
-                .AddSingleton<ITransactionValidator<ChangeKeyTransaction>, ChangeKeyTransactionValidator>()
-                .AddSingleton<ITransactionValidator<ChangeAccountInfoTransaction>, ChangeAccountInfoTransactionValidator>()
-                .AddSingleton<ITransactionValidator<ListAccountTransaction>, ListAccountTransactionValidator>()
                 .AddLogging(builder =>
                 {
                     builder
-                        .SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace)                   
+                        .SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace)
                         .AddNLog(new NLogProviderOptions()
                         {
                             CaptureMessageTemplates = true,
@@ -87,53 +65,21 @@ namespace MicroCoin
                 })
                 .BuildServiceProvider();
             
-            var keyStore = ServiceLocator.GetService<IKeyStore>();
-            if (keyStore.Count() == 0)
-            {
-                keyStore.Add(ECKeyPair.CreateNew());
-            }
-            ServiceLocator.GetService<ICheckPointService>().LoadFromBlockChain();             
-            ServiceLocator
-                .GetService<IEventAggregator>()
-                .GetEvent<NetworkEvent>()
-                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<HelloRequest>>().Handle,
-                ThreadOption.BackgroundThread,
-                false, (p) => p.Header.Operation == NetOperationType.Hello);
-
-            ServiceLocator
-                .GetService<IEventAggregator>()
-                .GetEvent<NetworkEvent>()
-                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<NewTransactionRequest>>().Handle,
-                ThreadOption.BackgroundThread,
-                false, (p) => p.Header.Operation == NetOperationType.NewTransaction && p.Header.RequestType == RequestType.AutoSend);
-
-            ServiceLocator
-                .EventAggregator
-                .GetEvent<NetworkEvent>()
-                .Subscribe(ServiceLocator.ServiceProvider.GetService<IHandler<BlockResponse>>().Handle,
-                ThreadOption.BackgroundThread,
-                false,
-                (p) => p.Header.Operation == NetOperationType.Blocks ||
-                       p.Header.Operation == NetOperationType.NewBlock ||
-                       p.Header.Operation == NetOperationType.BlockHeader
-                       );
-
-            ServiceLocator.EventAggregator.GetEvent<NetworkEvent>().Subscribe(
-                ServiceLocator.ServiceProvider.GetService<IHandler<CheckPointResponse>>().Handle,
-                ThreadOption.BackgroundThread,
-                false,
-                p => p.Header.Operation == NetOperationType.CheckPoint && p.Header.RequestType == RequestType.Response);
-
-            ServiceLocator.EventAggregator.GetEvent<NewServerConnection>().Subscribe((node) =>
-            {
-                if (node.NetClient != null && node.Connected)
-                    node.NetClient.Send(new NetworkPacket<HelloRequest>(HelloRequest.NewRequest(ServiceLocator.GetService<IBlockChain>())));
-            }, ThreadOption.BackgroundThread, false);
+            moduleManager.InitModules(ServiceLocator.ServiceProvider);
 
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {
-                throw new Exception("NO FIX SEEDS FOUND");
+                throw new Exception("NO FIX SEED SERVER FOUND");
             }
+            await SyncBlockChain();
+            ServiceLocator.GetService<IDiscovery>().Start();
+            ServiceLocator.GetService<INetServer>().Start();
+            Console.ReadLine();
+            ServiceLocator.ServiceProvider.Dispose();
+        }
+
+        private static async Task SyncBlockChain()
+        {
             var bc = ServiceLocator.GetService<IBlockChain>();
             var bestNodes = ServiceLocator.GetService<IPeerManager>().GetNodes().Where(p => p.NetClient != null).OrderByDescending(p => p.BlockHeight);
             var error = false;
@@ -142,7 +88,7 @@ namespace MicroCoin
                 foreach (var bestNode in bestNodes)
                 {
                     if (bestNode.BlockHeight > bc.BlockHeight)
-                    {                        
+                    {
                         var remoteBlock = bestNode.BlockHeight;
                         do
                         {
@@ -174,7 +120,7 @@ namespace MicroCoin
                                 foreach (var block in blocks.OrderByDescending(p => p.Id))
                                 {
                                     var myBlock = bc.GetBlock(block.Id);
-                                    if (myBlock!=null && (block.Header.CompactTarget == myBlock.Header.CompactTarget))
+                                    if (myBlock != null && (block.Header.CompactTarget == myBlock.Header.CompactTarget))
                                     {
                                         // On baseblock
                                     }
@@ -184,10 +130,7 @@ namespace MicroCoin
                     }
                 }
             } while (error);
-            ServiceLocator.GetService<IDiscovery>().Start();
-            ServiceLocator.GetService<INetServer>().Start();
-            Console.ReadLine();
-            ServiceLocator.ServiceProvider.Dispose();
         }
+
     }
 }

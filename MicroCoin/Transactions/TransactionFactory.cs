@@ -16,16 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-
 namespace MicroCoin.Transactions
 {
     public class TransactionFactory
     {
-        public static ITransaction FromType(TransactionType transactionType)
+        public static ITransaction CreateFromType(TransactionType transactionType)
         {
             switch (transactionType)
             {

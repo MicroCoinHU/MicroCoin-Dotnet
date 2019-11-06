@@ -16,10 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.Common;
-using System.IO;
-using System.Text;
-
 namespace MicroCoin.Protocol
 {
     public class BlockHeaderRequest : BlockRequest

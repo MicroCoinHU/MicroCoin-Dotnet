@@ -17,12 +17,9 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using MicroCoin.BlockChain;
-using MicroCoin.Cryptography;
 using MicroCoin.Net;
 using MicroCoin.Protocol;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MicroCoin.Handlers
 {
