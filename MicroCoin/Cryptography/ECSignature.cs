@@ -19,18 +19,17 @@
 using System.IO;
 using System.Linq;
 using System.Text;
-using MicroCoin.Types;
 
 namespace MicroCoin.Cryptography
 {
-    public struct ECSignature
+    public struct ECSignature : IECSignature
     {
         public byte[] R { get; set; }
         public byte[] S { get; set; }
 
         public byte[] SigCompat { get; set; }
 
-        internal ECSignature(Stream stream)
+        public ECSignature(Stream stream)
         {
             SigCompat = new byte[0];
             using (var br = new BinaryReader(stream, Encoding.ASCII, true))
@@ -55,12 +54,12 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        internal void SaveToStream(Stream stream)
+        public void SaveToStream(Stream stream)
         {
             using (var bw = new BinaryWriter(stream, Encoding.ASCII, true))
             {
-                ushort rlen = (ushort) R.Length;
-                ushort slen = (ushort) S.Length;
+                ushort rlen = (ushort)R.Length;
+                ushort slen = (ushort)S.Length;
                 bw.Write(rlen);
                 bw.Write(R, 0, rlen);
                 bw.Write(slen);

@@ -29,45 +29,22 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MicroCoin.Cryptography
 {
-    public enum ECCurveType : ushort
-    {
-        Empty = 0,
-        Secp256K1 = 714,
-        Secp384R1 = 715,
-        Secp521R1 = 716,
-        Sect283K1 = 729
-    }
 
-    public class ECKeyPair : IEquatable<ECKeyPair>
+    public class ECKeyPair : KeyPair, IEquatable<ECKeyPair>
     {
-        public ECCurveType CurveType { get; set; } = ECCurveType.Empty;
-        public byte[] D { get; set; }
+        
         public BigInteger PrivateKey
         {
             get => D == null ? BigInteger.Zero : new BigInteger(D);
             set => D = value.ToByteArray();
         }
-
+        
         public ByteString Name { get; set; }
 
         private ECParameters? _eCParameters;
-
-        public ECPoint PublicKey
-        {
-            get;
-            set;
-        } = new ECPoint()
-        {
-            X = new byte[0],
-            Y = new byte[0]
-        };
-
-        public byte[] X { get => PublicKey.X; set { PublicKey = new ECPoint() { X = value, Y = PublicKey.Y }; } }
-        public byte[] Y { get => PublicKey.Y; set { PublicKey = new ECPoint() { Y = value, X = PublicKey.X }; } }
 
         public ECParameters ECParameters
         {
@@ -90,7 +67,6 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public static async Task<ECKeyPair> ImportAsync(string hex) => await Task.Run(() => Import(hex));
         public static ECKeyPair Import(string hex)
         {
             ECKeyPair keyPair = new ECKeyPair
@@ -225,7 +201,8 @@ namespace MicroCoin.Cryptography
                         }
                         ecdsa.Dispose();
                     }
-                }catch(Exception e)
+                }
+                catch (Exception e)
                 {
                     // ECdsa implementation not supported, fallback to bouncycastle
                 }

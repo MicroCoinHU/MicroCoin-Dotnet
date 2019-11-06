@@ -28,7 +28,6 @@ using Org.BouncyCastle.Math.EC;
 using Org.BouncyCastle.Security;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -147,12 +146,12 @@ namespace MicroCoin.Cryptography
 
         public ByteString DecryptString(Hash em, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
         {
-            using (AesManaged tdes = new AesManaged())
+            using (AesManaged aes = new AesManaged())
             {
-                tdes.Key = GenerateSharedKey(myKey, otherKey);
-                tdes.Mode = CipherMode.ECB;
-                tdes.Padding = PaddingMode.PKCS7;
-                using (ICryptoTransform decrypt = tdes.CreateDecryptor())
+                aes.Key = GenerateSharedKey(myKey, otherKey);
+                aes.Mode = CipherMode.ECB;
+                aes.Padding = PaddingMode.PKCS7;
+                using (ICryptoTransform decrypt = aes.CreateDecryptor())
                 {
                     return decrypt.TransformFinalBlock(em, 0, em.Length);
                 }
@@ -161,12 +160,12 @@ namespace MicroCoin.Cryptography
 
         public Hash EncryptString(ByteString data, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
         {
-            using (AesManaged tdes = new AesManaged())
+            using (AesManaged aes = new AesManaged())
             {
-                tdes.Key = GenerateSharedKey(myKey, otherKey);
-                tdes.Mode = CipherMode.ECB;
-                tdes.Padding = PaddingMode.PKCS7;
-                using (ICryptoTransform crypt = tdes.CreateEncryptor())
+                aes.Key = GenerateSharedKey(myKey, otherKey);
+                aes.Mode = CipherMode.ECB;
+                aes.Padding = PaddingMode.PKCS7;
+                using (ICryptoTransform crypt = aes.CreateEncryptor())
                 {
                     return crypt.TransformFinalBlock(data, 0, data.Length);
                 }
