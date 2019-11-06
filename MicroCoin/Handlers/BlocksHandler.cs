@@ -35,6 +35,7 @@ namespace MicroCoin.Handlers
         private readonly ConcurrentBag<uint> processedBlocks = new ConcurrentBag<uint>();
         private readonly ConcurrentBag<Block> newBlocks = new ConcurrentBag<Block>();
         private readonly IPeerManager peerManager;
+
         public BlocksHandler(IBlockChain blockChain, IPeerManager peerManager)
         {
             this.blockChain = blockChain;
@@ -126,7 +127,7 @@ namespace MicroCoin.Handlers
         {
             var request = packet.Payload<BlockRequest>();
             var blocks = blockChain.GetBlocks(request.StartBlock, request.EndBlock);
-            if (blocks.Count() == request.EndBlock - request.StartBlock + 1)
+            //if (blocks.Count() == request.EndBlock - request.StartBlock + 1)
             {
                 packet.Node.NetClient.Send(new NetworkPacket<BlockResponse>(new BlockResponse(blocks)), packet.Header.RequestId);
             }
