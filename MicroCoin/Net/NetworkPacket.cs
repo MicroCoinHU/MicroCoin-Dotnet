@@ -18,7 +18,6 @@
 //-----------------------------------------------------------------------
 using MicroCoin.Common;
 using MicroCoin.Protocol;
-using System;
 using System.IO;
 
 namespace MicroCoin.Net

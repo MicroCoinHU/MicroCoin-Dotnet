@@ -20,6 +20,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using Microsoft.Extensions.Logging;
+using MicroCoin.Types;
 
 namespace MicroCoin.Net
 {
@@ -27,6 +29,14 @@ namespace MicroCoin.Net
     {
         private readonly IList<Node> peers = new List<Node>();
         private readonly object lobj = new object();
+        private readonly ILogger<IPeerManager> logger;
+
+        public PeerManager(ILogger<IPeerManager> logger)
+        {
+            this.logger = logger;
+        }
+
+
         public void AddNew(Node node)
         {
             lock (lobj)
@@ -34,6 +44,7 @@ namespace MicroCoin.Net
                 if(!peers.Any(p=>(p.IP == node.IP) && (p.Port == node.Port)))
                 {
                     peers.Add(node);
+                    logger.LogTrace("{0} added to peers", node.EndPoint);
                 }
             }
         }
@@ -63,6 +74,7 @@ namespace MicroCoin.Net
             lock (lobj)
             {                
                 peers.Remove(node);
+                logger.LogTrace("{0} removed from peers", node.EndPoint);
                 node.NetClient?.Dispose();
             }
         }

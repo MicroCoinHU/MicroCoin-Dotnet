@@ -21,12 +21,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Threading;
-using Prism.Events;
 using MicroCoin.Protocol;
 using MicroCoin.BlockChain;
-using MicroCoin.Common;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MicroCoin.Modularization;
 
 namespace MicroCoin.Net
 {
@@ -140,17 +139,22 @@ namespace MicroCoin.Net
                         }
                         else
                         {
-                            logger.LogTrace("Peer {0} died", elem.EndPoint);
                             elem.ConnectionAttemps += 1;
                             elem.NetClient?.Dispose();
                             elem.NetClient = null;
+                            logger.LogTrace("Peer {0} died. Connection attemps: {1}", elem.EndPoint, elem.ConnectionAttemps);
                         }
                     }                   
-                    foreach(var peer in peerManager.GetNodes().Where(p => p.ConnectionAttemps >= 6).ToList())
+                    foreach(var peer in peerManager.GetNodes().Where(p => p.ConnectionAttemps >= 5).ToList())
                     {
                         peerManager.Remove(peer);
+                    }                    
+                    logger.LogInformation("Total {0} peers. {1} alive and {2} died.", peerManager.GetNodes().Count(), peerManager.GetNodes().Count(p=>p.Connected), peerManager.GetNodes().Count(p => !p.Connected));
+                    logger.LogTrace("{0} disctinct hosts", peerManager.GetNodes().GroupBy(p => p.EndPoint.Address.ToString()).Count());
+                    foreach(var node in peerManager.GetNodes().Where(p => p.Connected))
+                    {
+                        logger.LogTrace("{0} - Last connection: {1}", node.EndPoint, node.LastConnection);
                     }
-                    logger.LogInformation("Now have total {0} peers. {1} alive and {2} died.", peerManager.GetNodes().Count(), peerManager.GetNodes().Count(p=>p.Connected), peerManager.GetNodes().Count(p => !p.Connected));
                     Thread.Sleep(10000);
                 }
             }
