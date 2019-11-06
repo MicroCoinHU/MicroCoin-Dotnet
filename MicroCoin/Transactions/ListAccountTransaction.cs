@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
@@ -177,47 +176,6 @@ namespace MicroCoin.Transactions
             var target = checkPointService.GetAccount(TargetAccount);
             var signer = checkPointService.GetAccount(SignerAccount);
             return new List<Account> { signer, target };
-        }
-    }
-
-    public class ListAccountTransactionValidator : ITransactionValidator<ListAccountTransaction>
-    {
-
-        private readonly ICheckPointService checkPointService;
-        private readonly IBlockChain blockChain;
-        public ListAccountTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain)
-        {
-            this.checkPointService = checkPointService;
-            this.blockChain = blockChain;
-        }
-
-        public bool IsValid(ListAccountTransaction transaction)
-        {
-            var blockHeight = blockChain.BlockHeight;
-
-            var signer = checkPointService.GetAccount(transaction.SignerAccount);
-            if (signer.Balance < transaction.Fee) return false;
-            if (signer.AccountInfo.LockedUntilBlock > blockHeight) return false;
-            if (transaction.SignerAccount != transaction.TargetAccount)
-            {
-                //if (signer.AccountInfo.State != AccountState.Normal) return false;
-            }
-            var target = checkPointService.GetAccount(transaction.TargetAccount);
-            if (target.AccountInfo.LockedUntilBlock > blockHeight) return false;
-            if (transaction.TransactionType == TransactionType.ListAccountForSale)
-            {
-                //if (target.AccountInfo.State != AccountState.Normal)
-                //    return false;
-            }
-            else
-            {
-               // if (target.AccountInfo.State != AccountState.Sale)
-               //     return false;
-            }
-
-            var seller = checkPointService.GetAccount(transaction.AccountToPay);
-            if (seller.AccountInfo.State != AccountState.Normal) return false;
-            return true;
         }
     }
     }

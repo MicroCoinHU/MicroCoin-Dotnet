@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
@@ -151,46 +150,6 @@ namespace MicroCoin.Transactions
             var account = checkPointService.GetAccount(TargetAccount);
             var signer = checkPointService.GetAccount(SignerAccount);
             return new List<Account> { account, signer };
-        }
-    }
-
-    public class ChangeKeyTransactionValidator : ITransactionValidator<ChangeKeyTransaction>
-    {
-
-        private readonly ICheckPointService checkPointService;
-        private readonly IBlockChain blockChain;
-        private readonly ICryptoService cryptoService;
-
-        public ChangeKeyTransactionValidator(ICheckPointService checkPointService, IBlockChain blockChain, ICryptoService cryptoService)
-        {
-            this.checkPointService = checkPointService;
-            this.blockChain = blockChain;
-            this.cryptoService = cryptoService;
-        }
-
-
-        public bool IsValid(ChangeKeyTransaction transaction)
-        {
-            if (transaction.Fee < 0) return false;
-            if (!transaction.IsValid()) return false;
-
-            var blockHeight = blockChain.BlockHeight;
-
-            var signerAccount = checkPointService.GetAccount(transaction.SignerAccount);
-            //if (signerAccount.AccountInfo.State != AccountState.Normal) return false;
-
-            var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
-            //if (targetAccount.AccountInfo.State != AccountState.Normal) return false;
-
-            if (signerAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
-            if (targetAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
-
-            if (signerAccount.Balance < transaction.Fee) return false;
-            if (!cryptoService.ValidateSignature(transaction.GetHash(), transaction.Signature, signerAccount.AccountInfo.AccountKey))
-            {
-                return false;
-            }
-            return true;
         }
     }
 

@@ -18,12 +18,12 @@
 //-----------------------------------------------------------------------
 using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
-using MicroCoin.Common;
 using MicroCoin.Cryptography;
-using MicroCoin.Types;
+using MicroCoin.Modularization;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using MicroCoin.Types;
 
 namespace MicroCoin.Transactions
 {
@@ -40,8 +40,6 @@ namespace MicroCoin.Transactions
         {
             get
             {
-//                if (_payload.IsReadable) return _payload;
-//                ByteString bs = (string)(new Hash(_payload));
                 return _payload;
             }
             set => _payload = value;
