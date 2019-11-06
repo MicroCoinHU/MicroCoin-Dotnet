@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.Common;
 using MicroCoin.Cryptography;
+using MicroCoin.Modularization;
 using MicroCoin.Types;
 using System.IO;
 using System.Security.Cryptography;
@@ -42,7 +42,7 @@ namespace MicroCoin.BlockChain
         public Hash CheckPointHash { get; set; }
         public Hash TransactionHash { get; set; }
         public Hash ProofOfWork { get; set; }
-        internal BlockHeader(Stream stream)
+        public BlockHeader(Stream stream)
         {
             using (var br = new BinaryReader(stream, Encoding.ASCII, true))
             {
@@ -83,12 +83,12 @@ namespace MicroCoin.BlockChain
             }
         }
 
-        internal BlockHeader()
+        public BlockHeader()
         {
             AccountKey = new ECKeyPair();
         }
 
-        internal virtual void SaveToStream(Stream s)
+        public virtual void SaveToStream(Stream s)
         {
             using (var bw = new BinaryWriter(s, Encoding.ASCII, true))
             {

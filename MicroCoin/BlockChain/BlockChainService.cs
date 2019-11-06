@@ -53,7 +53,7 @@ namespace MicroCoin.BlockChain
             this.blockChainStorage = blockChainStorage;
             this.eventAggregator = eventAggregator;
             this.logger = logger;
-            logger.LogInformation("Loadaded blockchain. BlockHeight: {0}", blockChainStorage.BlockHeight);
+            logger.LogInformation("Blockchain loaded. BlockHeight: {0}", blockChainStorage.BlockHeight);
         }
 
         public void AddBlock(Block block)
@@ -190,7 +190,7 @@ namespace MicroCoin.BlockChain
         }
 
         public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
-        {
+        {           
             return blockChainStorage.GetBlocks(startBlock, endBlock);
         }
 

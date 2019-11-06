@@ -55,7 +55,7 @@ namespace MicroCoin.Handlers
                 WorkSum = 0
             };
             packet.Node.NetClient.Send(new NetworkPacket<HelloResponse>(NetOperationType.Hello, RequestType.Response, response), packet.Header.RequestId);
-            packet.Node.BlockHeight = hello.Block.Header.BlockNumber;
+            packet.Node.BlockHeight = hello.Block.Header.BlockNumber;            
             CheckPeers(hello.NodeServers);
             if (hello.Block.Header.BlockNumber > blockChain.BlockHeight)
             {

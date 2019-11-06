@@ -18,7 +18,6 @@
 //-----------------------------------------------------------------------
 using MicroCoin.BlockChain;
 using MicroCoin.Chain;
-using MicroCoin.Common;
 using MicroCoin.Transactions;
 using MicroCoin.Types;
 using System;
@@ -26,10 +25,11 @@ using System.Linq;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Prism.Events;
-using System.Diagnostics;
 using MicroCoin.Handlers;
 using MicroCoin.Cryptography;
 using System.IO;
+using MicroCoin.Modularization;
+using MicroCoin.Transactions.Validators;
 
 namespace MicroCoin.CheckPoints
 {

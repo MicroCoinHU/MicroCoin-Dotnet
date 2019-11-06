@@ -17,10 +17,6 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using MicroCoin.Net;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Extensions.DependencyInjection;
 using MicroCoin.Protocol;
 using MicroCoin.BlockChain;
 
@@ -52,7 +48,6 @@ namespace MicroCoin.Handlers
             };
             NetworkPacket<CheckPointRequest> np = new NetworkPacket<CheckPointRequest>(NetOperationType.CheckPoint, RequestType.Request, dt);
             packet.Node.NetClient.Send(np);
-
         }
 
         public void Handle(NetworkPacket packet)

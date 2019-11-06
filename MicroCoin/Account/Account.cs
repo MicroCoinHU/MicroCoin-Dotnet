@@ -16,10 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
-using MicroCoin.Transactions;
 using MicroCoin.Types;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -83,7 +81,7 @@ namespace MicroCoin.Chain
             LoadFromStream(s);
         }
 
-        internal void SaveToStream(BinaryWriter bw, bool writeLengths = true, bool proto2 = true)
+        public void SaveToStream(BinaryWriter bw, bool writeLengths = true, bool proto2 = true)
         {
             bw.Write(AccountNumber);
             AccountInfo.SaveToStream(bw, writeLengths);
@@ -98,7 +96,7 @@ namespace MicroCoin.Chain
             if (writeLengths) bw.Write(UpdatedByBlock);
         }
 
-        internal void LoadFromStream(Stream s)
+        public void LoadFromStream(Stream s)
         {
             using (var br = new BinaryReader(s, Encoding.Default, true))
             {

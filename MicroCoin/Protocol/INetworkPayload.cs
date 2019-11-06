@@ -17,9 +17,6 @@
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
 using MicroCoin.Common;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MicroCoin.Protocol
 {

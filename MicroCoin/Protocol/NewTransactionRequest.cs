@@ -27,7 +27,6 @@ namespace MicroCoin.Protocol
 {
     public class NewTransactionRequest : INetworkPayload
     {
-
         public IList<ITransaction> Transactions { get; set; }
         public DateTime Created { get; set; } = DateTime.Now;
 

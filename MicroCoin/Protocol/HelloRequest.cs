@@ -37,14 +37,13 @@ namespace MicroCoin.Protocol
         public string Version { get; set; }
         public ulong WorkSum { get; set; }
         public NetOperationType NetOperation => NetOperationType.Hello;
-
         public RequestType RequestType => RequestType.Request;
 
         public HelloRequest() {
         }
 
         public static HelloRequest NewRequest(IBlockChain blockChain)
-        {
+        {            
             return new HelloRequest()
             {
                 AccountKey = Params.NodeKey,

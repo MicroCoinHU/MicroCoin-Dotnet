@@ -18,9 +18,7 @@
 //-----------------------------------------------------------------------
 using MicroCoin.Chain;
 using MicroCoin.Types;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace MicroCoin.CheckPoints
 {

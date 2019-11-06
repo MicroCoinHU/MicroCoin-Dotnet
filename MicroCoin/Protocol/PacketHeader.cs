@@ -64,7 +64,7 @@ namespace MicroCoin.Protocol
             Error = 0;
         }
 
-        internal virtual void SaveToStream(Stream s)
+        public virtual void SaveToStream(Stream s)
         {
             using (BinaryWriter br = new BinaryWriter(s, Encoding.ASCII, true))
             {
