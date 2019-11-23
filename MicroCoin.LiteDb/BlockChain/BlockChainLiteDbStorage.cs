@@ -32,13 +32,13 @@ namespace MicroCoin.BlockChain
 
         public BlockChainLiteDbStorage()
         {
-            if (!Directory.Exists(Params.DataFolder))
+            if (!Directory.Exists(Params.Current.DataFolder))
             {
-                Directory.CreateDirectory(Params.DataFolder);
+                Directory.CreateDirectory(Params.Current.DataFolder);
             }
 
-            db = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "blockchain.mcc") + "; Journal=false; Async=true");
-            trdb = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "transactions.mcc") + "; Journal=false; Async=true");
+            db = new LiteDatabase("Filename=" + Path.Combine(Params.Current.DataFolder, "blockchain.mcc") + "; Journal=false; Async=true");
+            trdb = new LiteDatabase("Filename=" + Path.Combine(Params.Current.DataFolder, "transactions.mcc") + "; Journal=false; Async=true");
 
             var mapper = BsonMapper.Global;
             mapper.Entity<ITransaction>().Id(p => p._id);
@@ -181,9 +181,14 @@ namespace MicroCoin.BlockChain
             return db.GetCollection<BlockHeader>().FindById((int)blockNumber);
         }
 
+        public IEnumerable<BlockHeader> GetBlockHeaders(uint startBlock, uint endBlock)
+        {
+            return db.GetCollection<BlockHeader>().Find(p => p.Id >= startBlock && p.Id <= endBlock);
+        }
+
         public IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock)
         {
-            var blockHeaders = db.GetCollection<BlockHeader>().Find(p => p.Id >= startBlock && p.Id <= endBlock);
+            var blockHeaders = GetBlockHeaders(startBlock, endBlock);
             var transactions = trdb.GetCollection<ITransaction>().Find(p => p.Block >= startBlock && p.Block <= endBlock);
             var blocks = new HashSet<Block>();
             foreach(BlockHeader header in blockHeaders)

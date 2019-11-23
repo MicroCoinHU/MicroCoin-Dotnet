@@ -21,7 +21,7 @@ using System;
 namespace MicroCoin.Types
 {
 
-    public struct Timestamp
+    public readonly struct Timestamp
     {
         private readonly uint _unixTimestamp;
         public Timestamp(uint unixTimestamp)
@@ -51,7 +51,7 @@ namespace MicroCoin.Types
             return t._unixTimestamp;
         }
 
-        public override string ToString()
+        public readonly override string ToString()
         {
             return ((DateTime)this).ToString();
         }

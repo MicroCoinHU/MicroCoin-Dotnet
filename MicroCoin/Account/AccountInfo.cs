@@ -31,8 +31,9 @@ namespace MicroCoin.Chain
         Sale
     }
 
-    public class AccountInfo : IEquatable<AccountInfo>
+    public class AccountInfo : IEquatable<AccountInfo>    
     {
+        public AccountNumber AccountNumber { get; set; }
         public AccountState State { get; set; }
         public string StateString
         {
@@ -62,7 +63,7 @@ namespace MicroCoin.Chain
             return ai;
         }
 
-        internal void SaveToStream(BinaryWriter bw, bool writeLengths = true)
+        internal void SaveToStream(BinaryWriter bw, in bool writeLengths = true)
         {
             ushort len = 0;
             long pos = bw.BaseStream.Position;

@@ -19,74 +19,73 @@
 
 namespace MicroCoin.Types
 {
-    public struct Currency
+    public readonly struct Currency
     {
-        public decimal value { get; }
+        public readonly decimal Value { get; }
 
-        public Currency(decimal value)
+        public Currency(in decimal value)
         {
-            this.value = value;
+            Value = value;
         }
 
-        public static implicit operator decimal(Currency m)
+        public static implicit operator decimal(in Currency m)
         {
-            return m.value;
+            return m.Value;
         }
 
-        public static implicit operator ulong(Currency m)
+        public static implicit operator ulong(in Currency m)
         {
-            return (ulong)(m.value*10000M);
+            return (ulong)(m.Value * 10000M);
         }
 
-
-        public static implicit operator Currency(ulong m)
+        public static implicit operator Currency(in ulong m)
         {
             return new Currency( m / 10000M );
         }
 
-        public static Currency operator +(Currency a, Currency b)
+        public static Currency operator +(in Currency a, in Currency b)
         {
-            return new Currency(a.value + b.value);
+            return new Currency(a.Value + b.Value);
         }
 
-        public static Currency operator -(Currency a, Currency b)
+        public static Currency operator -(in Currency a, in Currency b)
         {
-            return new Currency(a.value - b.value);
+            return new Currency(a.Value - b.Value);
         }
 
-        public static Currency operator -(Currency a, ulong b)
+        public static Currency operator -(in Currency a, in ulong b)
         {
-            return new Currency(a.value - b);
+            return new Currency(a.Value - b);
         }
 
-        public static Currency operator +(Currency a, ulong b)
+        public static Currency operator +(in Currency a, in ulong b)
         {
-            return new Currency(a.value + b);
+            return new Currency(a.Value + b);
         }
 
-        public override bool Equals(object obj)
+        public readonly override bool Equals(object obj)
         {
             return ((ulong)this).Equals(obj);
         }
 
-        public override string ToString()
+        public readonly override string ToString()
         {
-            return value.ToString("G");
+            return Value.ToString("G");
         }
 
-        public string ToString(string format)
+        public readonly string ToString(string format)
         {
-            return value.ToString(format);
+            return Value.ToString(format);
         }
 
-        public override int GetHashCode()
+        public readonly override int GetHashCode()
         {
-            return value.GetHashCode();
+            return Value.GetHashCode();
         }
 
-        public static explicit operator Currency(long v)
+        public static explicit operator Currency(in long v)
         {
-            return (ulong)v;            
+            return (ulong)v; 
         }
     }
 }

@@ -26,7 +26,7 @@ namespace MicroCoin.Net
 {
     public class NetServer : INetServer
     {
-        private readonly TcpListener tcpListener = new TcpListener(IPAddress.Any, Params.ServerPort);
+        private readonly TcpListener tcpListener = new TcpListener(IPAddress.Any, Params.Current.ServerPort);
         private Thread listenerThread = null;
         private readonly IPeerManager peerManager;
         private readonly ILogger<INetServer> logger;
@@ -43,12 +43,20 @@ namespace MicroCoin.Net
             {
                 while (true)
                 {
-                    tcpListener.Start();                    
-                    var client = tcpListener.AcceptTcpClient();
-                    if (client == null) continue;
-                    logger?.LogInformation("New client connection {0}", client.Client.RemoteEndPoint);
-                    var netClient = ServiceLocator.GetService<INetClient>();
-                    peerManager.AddNew(netClient.HandleClient(client));
+                    tcpListener.Start();
+                    try
+                    {
+                        var client = tcpListener.AcceptTcpClient();
+                        if (client == null) continue;
+                        logger?.LogInformation("New client connection {0}", client.Client.RemoteEndPoint);
+                        var netClient = ServiceLocator.GetService<INetClient>();
+                        peerManager.AddNew(netClient.HandleClient(client));
+                    }
+                    catch (SocketException ex)
+                    {
+                        logger.LogError(ex, "Socket exception");
+                        return;
+                    }
                 }
             });
             listenerThread.Start();

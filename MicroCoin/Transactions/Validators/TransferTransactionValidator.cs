@@ -49,20 +49,26 @@ namespace MicroCoin.Transactions.Validators
             }
             if (transaction.TransactionStyle == TransferTransaction.TransferType.Transaction)
             {
-                if (transaction.TargetAccount.Equals(transaction.SignerAccount)) return false;
-                if (senderAccount.Balance < transaction.Amount + transaction.Fee) return false;
-                var blockHeight = blockChain.BlockHeight;
-                if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
-                if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
-                if (senderAccount.TransactionCount + 1 != transaction.TransactionCount) return false;
-                if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
+                return ValidateTransferTransaction(transaction, senderAccount, targetAccount);
             }
-            else if (transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
+            if (transaction.TransactionStyle == TransferTransaction.TransferType.BuyAccount)
             {
                 if (transaction.SellerAccount == transaction.TargetAccount) return false;
                 if (transaction.SignerAccount == transaction.TargetAccount) return false;
                 if (targetAccount.AccountInfo.State != AccountState.Sale) return false;
             }
+            return true;
+        }
+
+        private bool ValidateTransferTransaction(TransferTransaction transaction, Account senderAccount, Account targetAccount)
+        {
+            if (transaction.TargetAccount.Equals(transaction.SignerAccount)) return false;
+            if (senderAccount.Balance < transaction.Amount + transaction.Fee) return false;
+            var blockHeight = blockChain.BlockHeight;
+            if (5 * (blockHeight + 1) < senderAccount.AccountNumber) return false;
+            if (senderAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;
+            if (senderAccount.TransactionCount + 1 != transaction.TransactionCount) return false;
+            if (5 * (blockHeight + 1) < targetAccount.AccountNumber) return false;
             return true;
         }
     }

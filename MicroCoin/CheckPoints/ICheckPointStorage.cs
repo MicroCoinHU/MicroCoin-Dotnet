@@ -29,8 +29,6 @@ namespace MicroCoin.CheckPoints
         void AddBlock(CheckPointBlock block);
         void AddBlocks(IEnumerable<CheckPointBlock> block);
         CheckPointBlock GetBlock(int blockNumber);
-        Account GetAccount(AccountNumber accountNumber);
-        void AddAccounts(IList<Account> modifiedAccounts);
         void UpdateBlock(CheckPointBlock block);
         void SaveState();
     }

@@ -18,6 +18,7 @@
 //-----------------------------------------------------------------------
 namespace MicroCoin.Transactions.Validators
 {
+
     public interface ITransactionValidator<T> where T : class, ITransaction
     {
         bool IsValid(T transaction);

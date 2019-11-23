@@ -92,7 +92,7 @@ namespace MicroCoin.Protocol
 
         public Hash GetHash()
         {
-            MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new MemoryStream(512);
             try
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))

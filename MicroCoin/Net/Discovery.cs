@@ -63,7 +63,7 @@ namespace MicroCoin.Net
             HelloRequest request = HelloRequest.NewRequest(blockChain, blockFactory);
             NetworkPacket<HelloRequest> networkPacket = new NetworkPacket<HelloRequest>(request);
             logger.LogTrace("Discovering fixed servers");
-            foreach (var server in Params.FixedSeedServers)
+            foreach (var server in Params.Current.FixedSeedServers)
             {
                 var node = new Node
                 {
@@ -109,7 +109,7 @@ namespace MicroCoin.Net
                 {
                     if (peerManager.GetNodes().Count() == 0)
                     {
-                        foreach (var item in Params.FixedSeedServers)
+                        foreach (var item in Params.Current.FixedSeedServers)
                         {
                             peerManager.AddNew(new Node
                             {

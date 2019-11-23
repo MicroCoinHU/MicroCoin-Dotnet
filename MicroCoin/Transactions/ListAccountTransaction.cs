@@ -110,7 +110,7 @@ namespace MicroCoin.Transactions
 
         public override byte[] GetHash()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(512))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {

@@ -135,7 +135,6 @@ namespace MicroCoin.BlockChain
                 Hash hash = ServiceLocator.GetService<ICryptoService>().DoubleSha256(headerHash);
                 return hash.SequenceEqual(ProofOfWork);
             }
-
         }
 
         public Hash CalcProofOfWork()
@@ -160,14 +159,13 @@ namespace MicroCoin.BlockChain
 
         public Hash GetPart1()
         {
-            using (BinaryWriter bw = new BinaryWriter(new MemoryStream()))
+            using (BinaryWriter bw = new BinaryWriter(new MemoryStream(512)))
             {
                 bw.Write(BlockNumber);
                 AccountKey.SaveToStream(bw.BaseStream, false);
                 bw.Write(Reward);
                 bw.Write(ProtocolVersion);
                 bw.Write(AvailableProtocol);
-                //uint newTarget = BlockChain.TargetToCompact(BlockChain.Instance.GetNewTarget());
                 bw.Write(CompactTarget);
                 return (bw.BaseStream as MemoryStream)?.ToArray();
             }
@@ -175,7 +173,7 @@ namespace MicroCoin.BlockChain
 
         public Hash GetPart3()
         {
-            using (BinaryWriter bw = new BinaryWriter(new MemoryStream()))
+            using (BinaryWriter bw = new BinaryWriter(new MemoryStream(128)))
             {
                 CheckPointHash.SaveToStream(bw, false);
                 TransactionHash.SaveToStream(bw, false);

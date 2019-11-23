@@ -46,10 +46,22 @@ namespace MicroCoin.Cryptography
 
         }
 
-        public ECSignature GenerateSignature(Hash data, ECKeyPair keyPair)
+        public ECSignature GenerateSignature(in Hash data, ECKeyPair keyPair)
         {
             try
             {
+                /*
+                using (var ecdsa = ECDsa.Create(keyPair))
+                {
+                    Span<byte> signature = stackalloc byte[100];
+                    Span<byte> hash = new Span<byte>(data);
+                    if (ecdsa.TrySignHash(hash, signature, out int bytes))
+                    {
+                        return new ECSignature(signature.Slice(0, 32).ToArray(),
+                            signature.Slice(32, bytes - 32 - 1).ToArray(), signature.ToArray());
+                    }
+                }
+                */
                 ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
                 X9ECParameters curve = SecNamedCurves.GetByName(keyPair.CurveType.ToString().ToLower());
                 ECDomainParameters domain = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H);
@@ -72,12 +84,7 @@ namespace MicroCoin.Cryptography
                 }
                 var rArr = r.Value.ToByteArrayUnsigned();
                 var sArr = s.Value.ToByteArrayUnsigned();
-                return new ECSignature
-                {
-                    R = rArr,
-                    S = sArr,
-                    SigCompat = sigBytes
-                };
+                return new ECSignature(rArr, sArr, sigBytes);
             }
             catch (Exception)
             {
@@ -85,7 +92,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public bool ValidateSignature(Hash data, ECSignature signature, ECKeyPair keyPair)
+        public bool ValidateSignature(in Hash data, ECSignature signature, ECKeyPair keyPair)
         {
             if (keyPair.CurveType != ECCurveType.Sect283K1 && !notSupportedECs.Contains(keyPair.CurveType))
             {
@@ -95,15 +102,19 @@ namespace MicroCoin.Cryptography
                     {                        
                         while (signature.S.Length * 8 < ecdsa.KeySize)
                         {
-                            var list = signature.S.ToList();
-                            list.Insert(0, 0);
-                            signature.S = list.ToArray();
+                            Span<byte> s = stackalloc byte[ecdsa.KeySize / 8 + (ecdsa.KeySize % 8 > 0 ? 1 : 0)];
+                            s.Fill(0);
+                            var s1 = s.Slice(s.Length - signature.S.Length, signature.S.Length);
+                            signature.S.CopyTo(s1);
+                            signature.S = s.ToArray();
                         }
                         while (signature.R.Length * 8 < ecdsa.KeySize)
                         {
-                            var list = signature.R.ToList();
-                            list.Insert(0, 0);
-                            signature.R = list.ToArray();
+                            Span<byte> r = stackalloc byte[ecdsa.KeySize / 8 + (ecdsa.KeySize % 8 > 0 ? 1 : 0)];
+                            r.Fill(0);
+                            var r1 = r.Slice(r.Length - signature.R.Length, signature.R.Length);
+                            signature.R.CopyTo(r1);
+                            signature.R = r.ToArray();
                         }
                         return ecdsa.VerifyHash(data, signature.Signature);
                     }
@@ -144,7 +155,7 @@ namespace MicroCoin.Cryptography
             return agreement.CalculateAgreement(pubKey).ToByteArrayUnsigned();
         }
 
-        public ByteString DecryptString(Hash em, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
+        public ByteString DecryptString(in Hash em, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
         {
             using (AesManaged aes = new AesManaged())
             {
@@ -158,7 +169,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public Hash EncryptString(ByteString data, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
+        public Hash EncryptString(in ByteString data, ECKeyPair myKey, System.Security.Cryptography.ECPoint otherKey)
         {
             using (AesManaged aes = new AesManaged())
             {
@@ -172,7 +183,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public Hash Sha256(Hash data)
+        public Hash Sha256(in Hash data)
         {
             lock(shaLock)
             {
@@ -180,7 +191,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public Hash DoubleSha256(Hash data)
+        public Hash DoubleSha256(in Hash data)
         {
             lock (shaLock)
             {
@@ -189,7 +200,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public Hash RipeMD160(Hash data)
+        public Hash RipeMD160(in Hash data)
         {
             var digest = new Org.BouncyCastle.Crypto.Digests.RipeMD160Digest();
             digest.BlockUpdate(data, 0, data.Length);

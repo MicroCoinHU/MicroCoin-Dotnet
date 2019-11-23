@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with MicroCoin. If not, see <http://www.gnu.org/licenses/>.
 //-----------------------------------------------------------------------
+using MicroCoin.Types;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -34,5 +37,7 @@ namespace MicroCoin.BlockChain
         Block GetBlock(uint blockNumber);
         BlockHeader GetBlockHeader(uint blockNumber);
         IEnumerable<Block> GetBlocks(uint startBlock, uint endBlock);
+        Tuple<Hash, uint> GetTarget(uint block);
+        void StartConsumer(ConcurrentQueue<Block> queue);
     }
 }

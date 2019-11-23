@@ -20,7 +20,7 @@ using System;
 
 namespace MicroCoin.Types
 {
-    public struct AccountNumber : IEquatable<object>, IEquatable<uint>, IEquatable<string>
+    public readonly struct AccountNumber : IEquatable<object>, IEquatable<uint>, IEquatable<string>
     {
 
         private readonly uint _value;
@@ -34,7 +34,7 @@ namespace MicroCoin.Types
                     _value = Convert.ToUInt32(value.Split('-')[0]);
                     if (!ToString().Equals(value))
                     {
-                        throw new ArgumentException(String.Format("Invalid account number, bad checksum {0}!={1}", value, ToString()));
+                        throw new ArgumentException(string.Format("Invalid account number, bad checksum {0}!={1}", value, ToString()));
                     }
                 }
                 else
@@ -53,12 +53,12 @@ namespace MicroCoin.Types
             _value = value;
         }
 
-        public override int GetHashCode()
+        public readonly override int GetHashCode()
         {
             return _value.GetHashCode();
         }
 
-        public bool Equals(uint obj)
+        public readonly bool Equals(uint obj)
         {
             return _value.Equals(obj);
         }
@@ -83,20 +83,18 @@ namespace MicroCoin.Types
             return !an.Equals(an2);
         }
 
-
-        public override bool Equals(object obj)
+        public readonly override bool Equals(object obj)
         {
             return _value.Equals(obj);
-
         }
 
-        public override string ToString()
+        public readonly override string ToString()
         {
             var checksum = ((_value * 101) % 89) + 10;
             return _value.ToString() + '-' + checksum;
         }
 
-        public bool Equals(string other)
+        public readonly bool Equals(string other)
         {
             AccountNumber an = new AccountNumber(other);
             return an._value == _value;

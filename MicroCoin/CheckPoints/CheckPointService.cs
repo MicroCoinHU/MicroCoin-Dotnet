@@ -30,20 +30,16 @@ using MicroCoin.Cryptography;
 using System.IO;
 using MicroCoin.Modularization;
 using MicroCoin.Transactions.Validators;
+using MicroCoin.Common;
 
 namespace MicroCoin.CheckPoints
 {
-    public class InvalidTransactionException : Exception
-    {
-        public InvalidTransactionException(string message) : base(message)
-        {
-        }
-    }
 
     public class CheckPointService : ICheckPointService
     {
         // Services
         private readonly ICheckPointStorage checkPointStorage;
+        private readonly IAccountStorage accountStorage;
         private readonly IBlockChain blockChain;
         private readonly ILogger<CheckPointService> logger;
         private readonly ICryptoService cryptoService;
@@ -53,7 +49,7 @@ namespace MicroCoin.CheckPoints
         private readonly IList<Account> modifiedAccounts = new List<Account>();
         private readonly Dictionary<Type, Type> validators = new Dictionary<Type, Type>();
         private readonly IList<string> pendingTransactions = new List<string>();
-        private readonly List<Hash> hashBuffer = new List<Hash>();
+        private readonly HashList hashBuffer = new HashList();
         
         // internal variables
         private readonly object checkPointLock = new object();
@@ -61,12 +57,13 @@ namespace MicroCoin.CheckPoints
         private ulong accumulatedWork = 0;
 
         public CheckPointService(ICheckPointStorage checkPointStorage, IEventAggregator eventAggregator,
-            IBlockChain blockChain, ILogger<CheckPointService> logger, ICryptoService cryptoService)
+            IBlockChain blockChain, ILogger<CheckPointService> logger, ICryptoService cryptoService, IAccountStorage accountStorage)
         {
             this.checkPointStorage = checkPointStorage;
             this.blockChain = blockChain;
             this.logger = logger;
             this.cryptoService = cryptoService;
+            this.accountStorage = accountStorage;
             eventAggregator.GetEvent<BlocksAdded>().Subscribe(ProcessBlock, ThreadOption.PublisherThread);
             eventAggregator.GetEvent<NewTransaction>().Subscribe(HandleNewTransaction, ThreadOption.PublisherThread);
         }
@@ -75,7 +72,6 @@ namespace MicroCoin.CheckPoints
         {
             try
             {
-                //ProcessTransaction(transaction);
                 logger.LogInformation("Process transaction {0} signer: {1}", transaction.TransactionType, transaction.SignerAccount);
             }
             catch (InvalidTransactionException e)
@@ -86,13 +82,16 @@ namespace MicroCoin.CheckPoints
 
         public Account GetAccount(AccountNumber accountNumber, bool @readonly = false)
         {
-            var account = modifiedAccounts.FirstOrDefault(p=>p.AccountNumber == accountNumber);
+            var account = modifiedAccounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
             if (account != null) return account;
             var block = GetBlockForAccount(accountNumber);
             account = block.Accounts.FirstOrDefault(p => p.AccountNumber == accountNumber);
-            if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+            if (!@readonly)
             {
-                modifiedAccounts.Add(account);
+                if (!modifiedAccounts.Any(p => p.AccountNumber == account.AccountNumber))
+                {
+                    modifiedAccounts.Add(account);
+                }
             }
             return account;
         }
@@ -154,7 +153,7 @@ namespace MicroCoin.CheckPoints
                     {
                         ulong totalFee = 0;
                         if (block.Transactions != null)
-                            totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.value) * 10000);
+                            totalFee = (ulong)(block.Transactions.Sum(p => p.Fee.Value) * 10000);
                         var account = new Account
                         {
                             AccountNumber = i,
@@ -172,23 +171,16 @@ namespace MicroCoin.CheckPoints
                     foreach (var n in modifiedBlocks)
                     {
                         n.BlockHash = n.CalculateBlockHash(block.Id < 101);
-                        hashBuffer[(int)n.Id] = n.BlockHash;                        
+                        hashBuffer[(int)n.Id] = n.BlockHash;
                     }
                     Hash sha;
                     if (hashBuffer.Count == 0)
                     {
-                        sha = cryptoService.Sha256(Params.GenesisPayload);
+                        sha = cryptoService.Sha256(Params.Current.GenesisPayload);
                     }
                     else
-                    {                        
-                        using (var ms = new MemoryStream(hashBuffer.Count * 32))
-                        {                            
-                            foreach (var h in hashBuffer)
-                            {                                
-                                ms.Write(h, 0, 32);
-                            }
-                            sha = cryptoService.Sha256(ms);
-                        }
+                    {
+                        sha = cryptoService.Sha256(hashBuffer.GetBuffer());
                     }
 
                     if (sha != checkPointBlock.Header.CheckPointHash)
@@ -246,7 +238,7 @@ namespace MicroCoin.CheckPoints
                     }
                     checkPointBlock.BlockHash = checkPointBlock.CalculateBlockHash(block.Id < 101);
                     hashBuffer.Add(checkPointBlock.BlockHash);
-                    
+
                     if (!modifiedBlocks.Any(p => p.Id == checkPointBlock.Id))
                     {
                         modifiedBlocks.Add(checkPointBlock);
@@ -254,11 +246,11 @@ namespace MicroCoin.CheckPoints
                     
                     if (checkPointBlock.Id > 0 && (checkPointBlock.Id + 1) % 100 == 0)
                     {
-                        checkPointStorage.SaveState();
+                        //checkPointStorage.SaveState();
                         logger.LogInformation("Saving {0} blocks and {1} modified accounts", modifiedBlocks.Count, modifiedAccounts.Count);
                         checkPointStorage.AddBlocks(modifiedBlocks);
                         if (modifiedAccounts.Count > 0) 
-                            checkPointStorage.AddAccounts(modifiedAccounts);
+                            accountStorage.AddAccounts(modifiedAccounts);
                         logger.LogInformation("Saved {0} blocks and {1} modified accounts. New checkpoint height: {2}", modifiedBlocks.Count, modifiedAccounts.Count, checkPointBlock.Id);
                         modifiedBlocks.Clear();
                         modifiedAccounts.Clear();
@@ -379,6 +371,26 @@ namespace MicroCoin.CheckPoints
                 if (block == null) return;
                 ProcessBlock(block);
             }
+        }
+
+        public ICollection<Account> GetAccounts(AccountNumber from, int limit)
+        {
+            return accountStorage.GetAccounts(from, limit);
+        }
+
+        public IReadOnlyList<Account> GetAccounts()
+        {
+            return new AccountList(this);
+        }
+
+        public int GetAccountCount()
+        {
+            return blockChain.Count * 5;
+        }
+
+        public decimal GetTotalBalance()
+        {
+            return accountStorage.GetTotalBalance();
         }
     }
 }

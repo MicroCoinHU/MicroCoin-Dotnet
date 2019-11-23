@@ -44,10 +44,10 @@ namespace MicroCoin.Transactions.Validators
 
             var blockHeight = blockChain.BlockHeight;
 
-            var signerAccount = checkPointService.GetAccount(transaction.SignerAccount);
+            var signerAccount = checkPointService.GetAccount(transaction.SignerAccount, true);
             //if (signerAccount.AccountInfo.State != AccountState.Normal) return false;
 
-            var targetAccount = checkPointService.GetAccount(transaction.TargetAccount);
+            var targetAccount = checkPointService.GetAccount(transaction.TargetAccount, true);
             //if (targetAccount.AccountInfo.State != AccountState.Normal) return false;
 
             if (signerAccount.AccountInfo.LockedUntilBlock > blockHeight) return false;

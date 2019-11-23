@@ -27,6 +27,7 @@ using MicroCoin.Protocol;
 using MicroCoin.Transactions;
 using MicroCoin.Transactions.Validators;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Prism.Events;
 using System;
 
@@ -38,8 +39,8 @@ namespace MicroCoin
 
         public void InitModule(IServiceProvider serviceProvider)
         {
-            serviceProvider.GetService<ICheckPointService>().LoadFromBlockChain();            
-         
+            serviceProvider.GetService<ICheckPointService>().LoadFromBlockChain();
+
             serviceProvider
                 .GetService<IEventAggregator>()
                 .GetEvent<NetworkEvent>()

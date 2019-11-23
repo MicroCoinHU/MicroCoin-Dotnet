@@ -19,72 +19,51 @@
 using LiteDB;
 using MicroCoin.BlockChain;
 using MicroCoin.Chain;
+using MicroCoin.CheckPoints;
 using MicroCoin.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace MicroCoin.CheckPoints
+namespace MicroCoin.LiteDb.CheckPoints
 {
     public class CheckPointLiteDbStorage : ICheckPointStorage, IDisposable
     {
-        private LiteDatabase accountsdb;
         private LiteDatabase checkpointdb;
         private readonly IBlockChainStorage blockChainStorage;
+        private readonly IAccountStorage accountStorage;
 
-        public CheckPointLiteDbStorage(IBlockChainStorage blockChainStorage)
+        public CheckPointLiteDbStorage(IBlockChainStorage blockChainStorage, IAccountStorage accountStorage)
         {
             this.blockChainStorage = blockChainStorage;
-            if (!Directory.Exists(Params.DataFolder))
-            {                
-                Directory.CreateDirectory(Params.DataFolder);
+            this.accountStorage = accountStorage;
+
+            if (!Directory.Exists(Params.Current.DataFolder))
+            {
+                Directory.CreateDirectory(Params.Current.DataFolder);
             }
 
-            accountsdb = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "accounts.mcc") + "; Journal=false; Async=true");
-            checkpointdb = new LiteDatabase("Filename=" + Path.Combine(Params.DataFolder, "checkpoints.mcc") + "; Journal=false; Async=true");
-            
+            checkpointdb = new LiteDatabase("Filename=" + Path.Combine(Params.Current.DataFolder, "checkpoints.mcc") + "; Journal=false; Async=true");
+
             var mapper = BsonMapper.Global;
             mapper.Entity<CheckPointBlock>()
                 .Field(p => p.AccumulatedWork, "b")
                 .Field(p => p.BlockHash, "c")
                 .Ignore(p => p.Header)
                 .Ignore(p => p.Accounts);
-
-            mapper.Entity<Account>()
-                .Id(p => p.AccountNumber)
-                .Field(p => p.AccountInfo, "a")
-                .Field(p => p.AccountNumber, "b")
-                .Field(p => p.AccountType, "c")
-                .Field(p => p.Balance, "d")
-                .Field(p => p.BlockNumber, "e")
-                .Field(p => p.Name, "f")
-                .Field(p => p.TransactionCount, "g")
-                .Field(p => p.UpdatedBlock, "h")
-                .Ignore(p => p.VisibleBalance)
-                .Ignore(p => p.UpdatedByBlock)
-                .Ignore(p => p.Saved)
-                .Ignore(p => p.NameAsString);
-
-            mapper.Entity<AccountInfo>()
-                .Field(p => p.AccountToPayPrice, "a")
-                .Field(p => p.AccountKey, "b")
-                .Field(p => p.LockedUntilBlock, "c")
-                .Field(p => p.NewPublicKey, "d")
-                .Field(p => p.Price, "e")
-                .Field(p => p.State, "f")
-                .Ignore(p => p.StateString)
-                .Ignore(p => p.VisiblePrice);
         }
 
         public CheckPointBlock LastBlock
         {
-            get {
+            get
+            {
                 var id = checkpointdb.GetCollection<CheckPointBlock>().Max(p => p.Id).AsInt64;
                 var block = checkpointdb.GetCollection<CheckPointBlock>().FindById(id);
                 if (block == null) return null;
-                for (int i = (int)id * 5; i < (id + 1) * 5; i++) {
-                    block.Accounts.Add(accountsdb.GetCollection<Account>().FindById(id));
+                for (uint i = (uint)id * 5; i < (id + 1) * 5; i++)
+                {
+                    block.Accounts.Add(accountStorage.GetAccount(i));
                 }
                 return block;
             }
@@ -98,32 +77,26 @@ namespace MicroCoin.CheckPoints
             }
         }
 
-        public void AddAccounts(IList<Account> modifiedAccounts)
-        {
-            accountsdb.GetCollection<Account>().Upsert(modifiedAccounts);
-        }
-
         public void AddBlock(CheckPointBlock block)
         {
-            accountsdb.GetCollection<Account>().Upsert(block.Accounts);
+            accountStorage.AddAccounts(block.Accounts);
             checkpointdb.GetCollection<CheckPointBlock>().Upsert(block);
         }
 
         public void AddBlocks(IEnumerable<CheckPointBlock> blocks)
         {
-            accountsdb.GetCollection<Account>().Upsert(blocks.SelectMany(p => p.Accounts));
+            accountStorage.AddAccounts(blocks.SelectMany(p => p.Accounts).ToList());
             checkpointdb.GetCollection<CheckPointBlock>().Upsert(blocks);
         }
 
         public void Dispose()
         {
             checkpointdb.Dispose();
-            accountsdb.Dispose();
         }
 
         public Account GetAccount(AccountNumber accountNumber)
-        {                        
-            return accountsdb.GetCollection<Account>().FindById((int)accountNumber);
+        {
+            return accountStorage.GetAccount(accountNumber);
         }
 
         public CheckPointBlock GetBlock(int blockNumber)
@@ -133,9 +106,9 @@ namespace MicroCoin.CheckPoints
             cb.Header = blockChainStorage.GetBlockHeader((uint)blockNumber);
             var minAccount = blockNumber * 5;
             var maxAccount = blockNumber * 5 + 4;
-            for(var i = minAccount; i <= maxAccount; i++)
+            for (var i = minAccount; i <= maxAccount; i++)
             {
-                cb.Accounts.Add(accountsdb.GetCollection<Account>().FindById(i));
+                cb.Accounts.Add(accountStorage.GetAccount((uint)i));
             }
             return cb;
         }
@@ -143,9 +116,9 @@ namespace MicroCoin.CheckPoints
         private void Backup(string name)
         {
             var id = checkpointdb.GetCollection<CheckPointBlock>().Max(p => p.Id).AsInt64;
-            id = (id / 100) % 10;
-            string dataPath = Params.DataFolder;
-            string backupPath = Path.Combine(Params.DataFolder, "backups");
+            id = id / 100 % 10;
+            string dataPath = Params.Current.DataFolder;
+            string backupPath = Path.Combine(Params.Current.DataFolder, "backups");
             if (!Directory.Exists(backupPath)) Directory.CreateDirectory(backupPath);
             string newName = Path.Combine(backupPath, string.Format("{0}_{1}.mcc", name, id));
             string oldName = Path.Combine(dataPath, string.Format("{0}.mcc", name));
@@ -164,6 +137,21 @@ namespace MicroCoin.CheckPoints
         public void UpdateBlock(CheckPointBlock block)
         {
             checkpointdb.GetCollection<CheckPointBlock>().Update(block);
+        }
+
+        public ICollection<Account> GetAccounts(AccountNumber from, int limit)
+        {
+            return accountStorage.GetAccounts(from, limit);
+        }
+
+        public int GetAccountCount()
+        {
+            return accountStorage.GetAccountCount();
+        }
+
+        public decimal GetTotalBalance()
+        {
+            return 0;
         }
     }
 }

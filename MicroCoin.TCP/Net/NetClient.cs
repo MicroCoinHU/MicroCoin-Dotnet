@@ -116,7 +116,7 @@ namespace MicroCoin.Net
                         {
                             Magic = br.ReadUInt32()
                         };
-                        if (header.Magic == Params.NetworkPacketMagic)
+                        if (header.Magic == Params.Current.NetworkPacketMagic)
                         {
                             header.RequestType = (RequestType)br.ReadUInt16();
                             header.Operation = (NetOperationType)br.ReadUInt16();
@@ -200,7 +200,7 @@ namespace MicroCoin.Net
                             {
                                 break;
                             }
-                            if (header.Magic != Params.NetworkPacketMagic)
+                            if (header.Magic != Params.Current.NetworkPacketMagic)
                             {
                                 break;
                             }

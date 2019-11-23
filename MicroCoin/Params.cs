@@ -26,18 +26,26 @@ using System.Reflection;
 
 namespace MicroCoin
 {
-    public static class Params
+    public class Params : IConfiguration
     {
-        public static ushort ServerPort { get; set; } = 4005;
-        public static ByteString GenesisPayload { get; set; } = "(c) Peter Nemeth - Okes rendben okes";
-        public static uint NetworkPacketMagic { get; internal set; } = 0x0A043580;
-        public static ushort NetworkProtocolVersion { get; set; } = 6;
-        public static ushort NetworkProtocolAvailable { get; set; } = 6;
-        public static ECKeyPair NodeKey { get; set; } = ECKeyPair.CreateNew();
-        public static string BaseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MicroCoin.NET");
-        public static string DataFolder => Path.Combine(BaseFolder, "Data");
-        public static string LogFolder => Path.Combine(BaseFolder, "Log");
-        public static string ProgramVersion
+
+        public static IConfiguration Current { get; set; } = new Params();
+
+        public ushort ServerPort { get; set; } = 4005;
+        public ByteString GenesisPayload { get; set; } = "(c) Peter Nemeth - Okes rendben okes";
+        public uint NetworkPacketMagic { get; set; } = 0x0A043580;
+        public ushort NetworkProtocolVersion { get; set; } = 6;
+        public ushort NetworkProtocolAvailable { get; set; } = 6;
+        public ECKeyPair NodeKey { get; set; } = ECKeyPair.CreateNew();
+
+        public string BaseFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MicroCoin.NET");
+        public string DataFolder => Path.Combine(BaseFolder, "Data");
+        public string LogFolder => Path.Combine(BaseFolder, "Log");
+        public uint MinimumDifficulty { get; set; } = 0x19000000;
+        public int DifficultyAdjustFrequency { get; set; } = 100; // blocks
+        public int DifficultyCalcFrequency { get; set; } = 10; // blocks
+        public uint MinimumBlocksToUseAccount { get; set; } = 100; // blocks
+        public string ProgramVersion
         {
             get
             {
@@ -45,10 +53,9 @@ namespace MicroCoin
                 return assemblyVersion + ".NET DEV";
             }
         }
-        public static ICollection<IPEndPoint> FixedSeedServers { get; set; } = new HashSet<IPEndPoint>()
+        public ICollection<IPEndPoint> FixedSeedServers { get; set; } = new HashSet<IPEndPoint>()
         {
-            new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4004)
-            ,
+            new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4004),
             new IPEndPoint(IPAddress.Parse("194.182.64.181"), 4004),
             new IPEndPoint(IPAddress.Parse("80.211.211.48"), 4004),
             new IPEndPoint(IPAddress.Parse("94.177.237.196"), 4004),
@@ -56,5 +63,6 @@ namespace MicroCoin
             new IPEndPoint(IPAddress.Parse("194.182.64.181"), 4004),
             new IPEndPoint(IPAddress.Parse("80.211.200.121"), 4004)
         };
+        public int BlockTime { get; internal set; } = 300;
     }
 }

@@ -22,17 +22,18 @@ using System.Text;
 
 namespace MicroCoin.Types
 {
-    public struct ByteString
+    public readonly struct ByteString
     {
 
-        private byte[] _value;
+        private readonly byte[] _value;
+
+        public readonly int Length => _value == null ? 0 : _value.Length;
+        public readonly bool IsReadable => _value == null ? true : !_value.Any(p => char.IsControl((char)p));
 
         public ByteString(byte[] b)
         {
             _value = b;
         }
-
-        public int Length => _value == null ? 0 : _value.Length;
 
         public static implicit operator ByteString(string s)
         {
@@ -54,27 +55,25 @@ namespace MicroCoin.Types
             return new ByteString(s);
         }
 
-        public bool IsReadable => _value == null ? true : _value.Count(p => char.IsControl((char)p)) == 0;
-
         public static ByteString ReadFromStream(BinaryReader br)
         {
             ushort len = br.ReadUInt16();
             ByteString bs = br.ReadBytes(len);
-            if (bs._value == null) bs._value = new byte[0];
+            if (bs._value == null) return new byte[0];
             return bs;
         }
 
-        public void SaveToStream(BinaryWriter bw)
+        public readonly void SaveToStream(BinaryWriter bw)
         {
             _value.SaveToStream(bw);
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return this;
         }
 
-        public void SaveToStream(BinaryWriter bw, bool writeLengths)
+        public readonly void SaveToStream(BinaryWriter bw, bool writeLengths)
         {
             if (writeLengths) _value.SaveToStream(bw);
             else

@@ -46,11 +46,11 @@ namespace MicroCoin.Protocol
         {            
             return new HelloRequest()
             {
-                AccountKey = Params.NodeKey,
+                AccountKey = Params.Current.NodeKey,
                 NodeServers = new NodeServerList(),
-                ServerPort = Params.ServerPort,
+                ServerPort = Params.Current.ServerPort,
                 Timestamp = DateTime.UtcNow,
-                Version = Params.ProgramVersion,
+                Version = Params.Current.ProgramVersion,
                 Block = blockChain.BlockHeight > 0 ? blockChain.GetBlock((uint)blockChain.BlockHeight) : blockFactory.GenesisBlock(),
                 WorkSum = 0
             };

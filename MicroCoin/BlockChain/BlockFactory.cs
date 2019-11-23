@@ -47,7 +47,7 @@ namespace MicroCoin.BlockChain
                     ProofOfWork = new byte[0],
                     ProtocolVersion = 0,
                     Reward = 0,
-                    CheckPointHash = cryptoService.Sha256(Encoding.ASCII.GetBytes(Params.GenesisPayload)),
+                    CheckPointHash = cryptoService.Sha256(Encoding.ASCII.GetBytes(Params.Current.GenesisPayload)),
                     BlockSignature = 3,
                     Timestamp = 0
                 }

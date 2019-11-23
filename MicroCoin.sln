@@ -9,11 +9,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDB", "LiteDB\LiteDB\Lit
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.Common", "MicroCoin.Common\MicroCoin.Common.csproj", "{7987B98F-DC3A-47CB-93D5-B5C7957714C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCoin.Console", "MicroCoin.Console\MicroCoin.Console.csproj", "{32114719-D1FC-4B7C-B464-501DEE4F6BB7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.Console", "MicroCoin.Console\MicroCoin.Console.csproj", "{32114719-D1FC-4B7C-B464-501DEE4F6BB7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCoin.LiteDb", "MicroCoin.LiteDb\MicroCoin.LiteDb.csproj", "{48762162-6257-45E2-A474-8164564FFDF2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.LiteDb", "MicroCoin.LiteDb\MicroCoin.LiteDb.csproj", "{48762162-6257-45E2-A474-8164564FFDF2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroCoin.TCP", "MicroCoin.TCP\MicroCoin.TCP.csproj", "{970BDDFC-8CD3-4F04-91D1-6CE6B061F455}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.TCP", "MicroCoin.TCP\MicroCoin.TCP.csproj", "{970BDDFC-8CD3-4F04-91D1-6CE6B061F455}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.Wallet", "MicroCoin.Wallet\MicroCoin.Wallet.csproj", "{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicroCoin.SQLite", "MicroCoin.SQLite\MicroCoin.SQLite.csproj", "{993AC31E-6101-4D31-A6CF-C6C7137F4090}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -71,6 +75,22 @@ Global
 		{970BDDFC-8CD3-4F04-91D1-6CE6B061F455}.Release|Any CPU.Build.0 = Release|Any CPU
 		{970BDDFC-8CD3-4F04-91D1-6CE6B061F455}.Release|x64.ActiveCfg = Release|Any CPU
 		{970BDDFC-8CD3-4F04-91D1-6CE6B061F455}.Release|x64.Build.0 = Release|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Debug|x64.Build.0 = Debug|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Release|x64.ActiveCfg = Release|Any CPU
+		{05F3A8D7-EFC3-40B0-ADB9-E70817A2C33A}.Release|x64.Build.0 = Release|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Debug|x64.Build.0 = Debug|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Release|Any CPU.Build.0 = Release|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Release|x64.ActiveCfg = Release|Any CPU
+		{993AC31E-6101-4D31-A6CF-C6C7137F4090}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

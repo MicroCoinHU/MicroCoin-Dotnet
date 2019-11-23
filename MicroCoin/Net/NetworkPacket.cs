@@ -32,10 +32,10 @@ namespace MicroCoin.Net
         {
             Header = new PacketHeader
             {
-                AvailableProtocol = Params.NetworkProtocolAvailable,
-                ProtocolVersion = Params.NetworkProtocolVersion,
+                AvailableProtocol = Params.Current.NetworkProtocolAvailable,
+                ProtocolVersion = Params.Current.NetworkProtocolVersion,
                 Error = 0,
-                Magic = Params.NetworkPacketMagic,
+                Magic = Params.Current.NetworkPacketMagic,
                 RequestType = requestType,
                 Operation = netOperationType
             };
@@ -83,7 +83,7 @@ namespace MicroCoin.Net
             set
             {
                 message = value;
-                using (var ms = new MemoryStream())
+                using (var ms = new MemoryStream(512))
                 {
                     message.SaveToStream(ms);
                     ms.Position = 0;

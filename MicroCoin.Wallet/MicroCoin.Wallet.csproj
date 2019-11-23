@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="**\*.xaml.cs">
+      <DependentUpon>%(Filename)</DependentUpon>
+    </Compile>
+    <AvaloniaResource Include="**\*.xaml">
+      <SubType>Designer</SubType>
+    </AvaloniaResource>
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Remove="ProgressWindow.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="ProgressWindow.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="0.9.0-preview7" />
+    <PackageReference Include="Avalonia.Desktop" Version="0.9.0-preview7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.0-preview2.19525.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ProgressWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MicroCoin.Common\MicroCoin.Common.csproj" />
+    <ProjectReference Include="..\MicroCoin.LiteDb\MicroCoin.LiteDb.csproj" />
+    <ProjectReference Include="..\MicroCoin.TCP\MicroCoin.TCP.csproj" />
+    <ProjectReference Include="..\MicroCoin\MicroCoin.csproj" />
+  </ItemGroup>
+</Project>

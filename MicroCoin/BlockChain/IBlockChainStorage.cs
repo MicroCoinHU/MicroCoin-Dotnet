@@ -29,6 +29,7 @@ namespace MicroCoin.BlockChain
         Task AddBlocksAsync(IEnumerable<Block> blocks);
         Block GetBlock(uint blockNumber);
         BlockHeader GetBlockHeader(uint blockNumber);
+        IEnumerable<BlockHeader> GetBlockHeaders(uint startBlock, uint endBlock);
         void DeleteBlocks(uint from);
         int BlockHeight { get; }
         int Count { get; }

@@ -26,9 +26,23 @@ namespace MicroCoin.Cryptography
     {
         public byte[] R { get; set; }
         public byte[] S { get; set; }
-
         public byte[] SigCompat { get; set; }
+        public readonly byte[] Signature
+        {
+            get
+            {
+                var ret = R.ToList();
+                ret.AddRange(S);
+                return ret.ToArray();
+            }
+        }
 
+        public ECSignature(byte[] R, byte[] S, byte[] SigCompat)
+        {
+            this.R = R;
+            this.S = S;
+            this.SigCompat = SigCompat;
+        }
         public ECSignature(Stream stream)
         {
             SigCompat = new byte[0];
@@ -44,17 +58,7 @@ namespace MicroCoin.Cryptography
             }
         }
 
-        public byte[] Signature
-        {
-            get
-            {
-                var ret = R.ToList();
-                ret.AddRange(S);
-                return ret.ToArray();
-            }
-        }
-
-        public void SaveToStream(Stream stream)
+        public readonly void SaveToStream(Stream stream)
         {
             using (var bw = new BinaryWriter(stream, Encoding.ASCII, true))
             {

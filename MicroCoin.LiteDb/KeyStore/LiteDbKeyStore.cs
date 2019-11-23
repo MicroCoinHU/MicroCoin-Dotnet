@@ -30,7 +30,7 @@ namespace MicroCoin.KeyStore
 
         public LiteDbKeyStore()
         {
-            keysDb = new LiteDatabase("Filename=" + Path.Combine(Params.BaseFolder, "keys.mcc") + "; Journal=false; Async=true");
+            keysDb = new LiteDatabase("Filename=" + Path.Combine(Params.Current.BaseFolder, "keys.mcc") + "; Journal=false; Async=true");
             BsonMapper.Global.Entity<KeyPair>().Id(p => p.Id)
                 .Ignore(p=>p.PublicKey)
                 ;

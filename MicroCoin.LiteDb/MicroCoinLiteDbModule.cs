@@ -23,6 +23,7 @@ using MicroCoin.Chain;
 using MicroCoin.CheckPoints;
 using MicroCoin.Cryptography;
 using MicroCoin.KeyStore;
+using MicroCoin.LiteDb.CheckPoints;
 using MicroCoin.Modularization;
 using MicroCoin.Transactions;
 using MicroCoin.Types;
@@ -103,6 +104,7 @@ namespace MicroCoin.LiteDb
             serviceCollection
                 .AddSingleton<IKeyStore, LiteDbKeyStore>()
                 .AddSingleton<ICheckPointStorage, CheckPointLiteDbStorage>()
+                .AddSingleton<IAccountStorage, AccountLiteDbStorage>()
                 .AddSingleton<IBlockChainStorage, BlockChainLiteDbStorage>();
         }
 

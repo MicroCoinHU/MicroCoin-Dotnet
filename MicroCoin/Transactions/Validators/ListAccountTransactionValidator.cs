@@ -37,14 +37,14 @@ namespace MicroCoin.Transactions.Validators
         {
             var blockHeight = blockChain.BlockHeight;
 
-            var signer = checkPointService.GetAccount(transaction.SignerAccount);
+            var signer = checkPointService.GetAccount(transaction.SignerAccount, true);
             if (signer.Balance < transaction.Fee) return false;
             if (signer.AccountInfo.LockedUntilBlock > blockHeight) return false;
             if (transaction.SignerAccount != transaction.TargetAccount)
             {
                 //if (signer.AccountInfo.State != AccountState.Normal) return false;
             }
-            var target = checkPointService.GetAccount(transaction.TargetAccount);
+            var target = checkPointService.GetAccount(transaction.TargetAccount, true);
             if (target.AccountInfo.LockedUntilBlock > blockHeight) return false;
             if (transaction.TransactionType == TransactionType.ListAccountForSale)
             {
@@ -57,7 +57,7 @@ namespace MicroCoin.Transactions.Validators
                 //     return false;
             }
 
-            var seller = checkPointService.GetAccount(transaction.AccountToPay);
+            var seller = checkPointService.GetAccount(transaction.AccountToPay, true);
             if (seller.AccountInfo.State != AccountState.Normal) return false;
             return true;
         }

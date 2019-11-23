@@ -19,6 +19,7 @@
 using MicroCoin.BlockChain;
 using MicroCoin.Chain;
 using MicroCoin.Types;
+using System.Collections.Generic;
 
 namespace MicroCoin.CheckPoints
 {
@@ -26,6 +27,10 @@ namespace MicroCoin.CheckPoints
     {
         void ProcessBlock(Block block);
         Account GetAccount(AccountNumber accountNumber, bool @readonly = false);
+        ICollection<Account> GetAccounts(AccountNumber from, int limit);
+        decimal GetTotalBalance();
+        IReadOnlyList<Account> GetAccounts();
         void LoadFromBlockChain();
+        int GetAccountCount();
     }
 }

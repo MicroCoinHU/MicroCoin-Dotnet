@@ -70,7 +70,7 @@ namespace MicroCoin.Transactions
 
         public Hash GetOpHash(uint block)
         {
-            MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new MemoryStream(512);
             try
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
@@ -79,7 +79,7 @@ namespace MicroCoin.Transactions
                     bw.Write(SignerAccount);
                     bw.Write(TransactionCount);
                     Hash data;
-                    using (MemoryStream m = new MemoryStream())
+                    using (MemoryStream m = new MemoryStream(512))
                     {
                         SaveToStream(m);
                         data = m.ToArray();                                                
@@ -99,7 +99,7 @@ namespace MicroCoin.Transactions
 
         public Hash Serialize()
         {
-            using(var ms = new MemoryStream())
+            using(var ms = new MemoryStream(512))
             {
                 SaveToStream(ms);
                 return ms.ToArray();

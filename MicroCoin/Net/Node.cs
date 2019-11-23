@@ -48,7 +48,7 @@ namespace MicroCoin.Net
                 IP = br.ReadBytes(br.ReadUInt16());
                 Port = br.ReadUInt16();
                 LastConnection = br.ReadUInt32();
-                ServerPort = Params.ServerPort;
+                ServerPort = Params.Current.ServerPort;
             }
         }
     }

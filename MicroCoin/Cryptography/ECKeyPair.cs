@@ -25,6 +25,7 @@ using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -34,8 +35,7 @@ namespace MicroCoin.Cryptography
 {
 
     public class ECKeyPair : KeyPair, IEquatable<ECKeyPair>
-    {
-        
+    {        
         public BigInteger PrivateKey
         {
             get => D == null ? BigInteger.Zero : new BigInteger(D);
@@ -45,7 +45,7 @@ namespace MicroCoin.Cryptography
         public ByteString Name { get; set; }
 
         private ECParameters? _eCParameters;
-
+        private static readonly Dictionary<ECCurveType, ECDsa> ecdsas = new Dictionary<ECCurveType, ECDsa>(5);
         public ECParameters ECParameters
         {
             get
@@ -59,7 +59,17 @@ namespace MicroCoin.Cryptography
                 };
                 if (D != null)
                 {
-                    parameters.D = D;
+                    if (D.Length < PublicKey.X.Length)
+                    {
+                        Span<byte> b = stackalloc byte[PublicKey.X.Length];
+                        b.Fill(0);
+                        D.CopyTo(b.Slice(b.Length - D.Length));
+                        parameters.D = b.ToArray();
+                    }
+                    else
+                    {
+                        parameters.D = D;
+                    }
                 }
                 parameters.Validate();
                 _eCParameters = parameters;
@@ -93,8 +103,8 @@ namespace MicroCoin.Cryptography
             return keyPair.ECParameters;
         }
 
-        public void SaveToStream(Stream s, bool writeLength = true, bool writePrivateKey = false,
-            bool writeName = false)
+        public void SaveToStream(Stream s, in bool writeLength = true, in bool writePrivateKey = false,
+            in bool writeName = false)
         {
             using (BinaryWriter bw = new BinaryWriter(s, Encoding.ASCII, true))
             {
@@ -116,20 +126,17 @@ namespace MicroCoin.Cryptography
                     return;
                 }
 
-                byte[] x = PublicKey.X;
                 bw.Write(xLen);
-                bw.Write(x, x[0] == 0 ? 1 : 0, x.Length - (x[0] == 0 ? 1 : 0));
+                bw.Write(PublicKey.X, PublicKey.X[0] == 0 ? 1 : 0, PublicKey.X.Length - (PublicKey.X[0] == 0 ? 1 : 0));
                 if (CurveType == ECCurveType.Sect283K1)
                 {
-                    byte[] b = PublicKey.Y;
                     bw.Write(yLen);
-                    bw.Write(b, b[0] == 0 ? 1 : 0, b.Length - (b[0] == 0 ? 1 : 0));
+                    bw.Write(PublicKey.Y, PublicKey.Y[0] == 0 ? 1 : 0, PublicKey.Y.Length - (PublicKey.Y[0] == 0 ? 1 : 0));
                 }
                 else
                 {
-                    byte[] b = PublicKey.Y;
                     bw.Write(yLen);
-                    bw.Write(b, b[0] == 0 ? 1 : 0, b.Length - (b[0] == 0 ? 1 : 0));
+                    bw.Write(PublicKey.Y, PublicKey.Y[0] == 0 ? 1 : 0, PublicKey.Y.Length - (PublicKey.Y[0] == 0 ? 1 : 0));
                 }
 
                 if (writePrivateKey)
@@ -185,8 +192,17 @@ namespace MicroCoin.Cryptography
                 {
                     if (CurveType != ECCurveType.Empty && CurveType != ECCurveType.Sect283K1)
                     {
-                        ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString().ToLower());
-                        var ecdsa = ECDsa.Create(curve);
+                        ECDsa ecdsa;
+                        if (ecdsas.ContainsKey(CurveType))
+                        {
+                            ecdsa = ecdsas[CurveType];
+                        }
+                        else
+                        {
+                            ECCurve curve = ECCurve.CreateFromFriendlyName(CurveType.ToString().ToLower());
+                            ecdsa = ECDsa.Create(curve);
+                            ecdsas.Add(CurveType, ecdsa);
+                        }
                         while (X.Length * 8 < ecdsa.KeySize)
                         {
                             var padded = X.ToList();
@@ -199,7 +215,6 @@ namespace MicroCoin.Cryptography
                             padded.Insert(0, 0);
                             Y = padded.ToArray();
                         }
-                        ecdsa.Dispose();
                     }
                 }
                 catch (Exception e)

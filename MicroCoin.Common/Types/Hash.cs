@@ -22,17 +22,13 @@ using System.Linq;
 
 namespace MicroCoin.Types
 {
-    public struct Hash
+    public readonly struct Hash
     {
-
         private readonly byte[] _value;
-        
-        public Hash(byte[] b)
-        {
-            _value = b;
-        }
+        public readonly int Length => _value.Length;
 
-        public int Length => _value.Length;
+        public Hash(in byte[] b) =>_value = b;        
+        public Hash(in Span<byte> b) => _value = b.ToArray();        
 
         private static byte[] StringToByteArray(string hex)
         {
@@ -42,29 +38,18 @@ namespace MicroCoin.Types
                              .ToArray();
         }
 
-        public Hash Reverse()
-        {
-            return _value.Reverse().ToArray();
-        }
-
-        public static implicit operator Hash(string s)
-        {
-            return new Hash(StringToByteArray(s));
-        }
-
-        public static implicit operator string(Hash s)
+        public static implicit operator string(in Hash s)
         {
             return s._value == null ? null : BitConverter.ToString(s).Replace("-", "");
         }
-
-        public static implicit operator ByteString(Hash s) => new ByteString(s);
-
-        public static implicit operator byte[] (Hash s) => s._value;
-
-        public static implicit operator Hash(byte[] s) => new Hash(s);
-
-        public static implicit operator Hash(ByteString s) => new Hash(s);
-
+        public readonly Hash Reverse() => _value.Reverse().ToArray();        
+        public static implicit operator Hash(string s) => new Hash(StringToByteArray(s));        
+        public static implicit operator ByteString(in Hash s) => new ByteString(s);
+        public static implicit operator byte[](in Hash s) => s._value;
+        public static implicit operator Hash(in byte[] s) => new Hash(s);
+        public static implicit operator Hash(in ByteString s) => new Hash(s);
+        public readonly ReadOnlySpan<byte> AsSpan() => _value.AsSpan();        
+        public readonly override string ToString() => this;
         public static Hash ReadFromStream(BinaryReader br)
         {
             ushort len = br.ReadUInt16();
@@ -72,17 +57,8 @@ namespace MicroCoin.Types
             return bs;
         }
 
-        public void SaveToStream(BinaryWriter bw)
-        {
-            _value.SaveToStream(bw);
-        }
-
-        public override string ToString()
-        {
-            return this;
-        }
-
-        public void SaveToStream(BinaryWriter bw, bool writeLengths)
+        public readonly void SaveToStream(BinaryWriter bw) => _value.SaveToStream(bw);
+        public readonly void SaveToStream(BinaryWriter bw, in bool writeLengths)
         {
             if (writeLengths) _value.SaveToStream(bw);
             else {
@@ -92,9 +68,6 @@ namespace MicroCoin.Types
             }
         }
 
-        public bool SequenceEqual(Hash x)
-        {
-            return _value.SequenceEqual(x._value);
-        }
+        public readonly bool SequenceEqual(in Hash x) => _value.SequenceEqual(x._value);
     }
 }

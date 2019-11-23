@@ -41,7 +41,7 @@ namespace MicroCoin.CheckPoints
         /// List of all accounts
         /// </summary>
         /// <value>The accounts.</value>
-        public IList<Account> Accounts { get; set; } = new List<Account>(5);
+        public IList<Account> Accounts { get; } = new List<Account>(5);
         /// <summary>
         /// The block hash
         /// </summary>
@@ -106,7 +106,7 @@ namespace MicroCoin.CheckPoints
 
         public Hash CalculateBlockHash(bool proto1 = false)
         {
-            MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new MemoryStream(1024);
             try
             {
                 using (BinaryWriter bw = new BinaryWriter(ms, Encoding.ASCII, true))

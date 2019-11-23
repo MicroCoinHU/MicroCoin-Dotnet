@@ -34,7 +34,7 @@ namespace MicroCoin.Chain
         public decimal VisibleBalance => Balance;
         public uint UpdatedByBlock { get; set; }
         public uint TransactionCount { get; set; }
-        public ByteString Name { get; set; }
+        public ByteString Name { get; set; } = new byte[0];
         public string NameAsString
         {
             get => Name;
@@ -65,6 +65,10 @@ namespace MicroCoin.Chain
         {
             AccountInfo = new AccountInfo();
         }
+        public Account(Stream s)
+        {
+            LoadFromStream(s);
+        }
 
         public Account Clone()
         {
@@ -74,11 +78,6 @@ namespace MicroCoin.Chain
                 var account = new Account(bw.BaseStream);
                 return account;
             }
-        }
-
-        public Account(Stream s)
-        {
-            LoadFromStream(s);
         }
 
         public void SaveToStream(BinaryWriter bw, bool writeLengths = true, bool proto2 = true)
