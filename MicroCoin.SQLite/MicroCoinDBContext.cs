@@ -20,7 +20,7 @@ namespace MicroCoin.SQLite
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            options.UseSqlite("Data Source=" + Path.Combine(Params.DataFolder, "accounts.db"));
+            options.UseSqlite("Data Source=" + Path.Combine(Params.Current.DataFolder, "accounts.db"));
         }
 
 

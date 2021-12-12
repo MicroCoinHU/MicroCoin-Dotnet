@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MicroCoin.Common\MicroCoin.Common.csproj" />
-    <ProjectReference Include="..\MicroCoin.SQLite\MicroCoin.SQLite.csproj" />
+    <ProjectReference Include="..\MicroCoin.LiteDb\MicroCoin.LiteDb.csproj" />
     <ProjectReference Include="..\MicroCoin\MicroCoin.csproj" />
   </ItemGroup>
 

@@ -69,7 +69,7 @@ namespace MicroCoin
 
             if (!await ServiceLocator.GetService<IDiscovery>().DiscoverFixedSeedServers())
             {
-                throw new Exception("NO FIX SEED SERVER FOUND");
+                throw new Exception("NO FIX SEED SERVERS FOUND");
             }
             await SyncBlockChain();
             ServiceLocator.GetService<IDiscovery>().Start();

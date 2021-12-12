@@ -148,6 +148,7 @@ namespace MicroCoin.Transactions
             var sender = checkPointService.GetAccount(SignerAccount);
             var target = checkPointService.GetAccount(TargetAccount);
             var seller = checkPointService.GetAccount(SellerAccount);
+            
             if (TransactionStyle == TransferType.Transaction)
             {
                 sender.Balance -= Amount;
@@ -156,6 +157,7 @@ namespace MicroCoin.Transactions
                 sender.TransactionCount++;
                 return new List<Account> { sender, target };
             }
+            
             if(TransactionStyle == TransferType.BuyAccount || TransactionStyle == TransferType.TransactionAndBuyAccount)
             {
                 seller.Balance += target.AccountInfo.Price;
